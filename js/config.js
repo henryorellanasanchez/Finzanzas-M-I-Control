@@ -6,6 +6,7 @@
 
 // Project Settings → API → Project URL
 export const SUPABASE_URL = 'https://zflayxdhxmquuchrbrff.supabase.co';
+export const APP_PUBLIC_URL = 'https://henryorellanasanchez.github.io/Finzanzas-M-I-Control/';
 
 // Project Settings → API → Project API keys → "anon public"
 // Esta clave es pública por diseño; la seguridad real la da el Row

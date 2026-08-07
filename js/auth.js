@@ -2,7 +2,7 @@
    auth.js — login con Google, perfil (Nombres/Apellidos), grupos de
    finanzas, cambio de grupo activo y permisos owner/viewer.
    ==================================================================== */
-import { supabase } from './config.js';
+import { supabase, APP_PUBLIC_URL } from './config.js';
 import { state } from './state.js';
 import { esc, toast, openModal } from './utils.js';
 import { applyRoleUI } from './ui.js';
@@ -62,7 +62,10 @@ export function hideAuthScreen(){
 export async function loginWithGoogle(){
   const token = getInviteTokenFromURL();
   if(token) localStorage.setItem('pending_invite_token', token);
-  const cleanBase = window.location.origin + window.location.pathname.replace(/\/share\/.+$/,'');
+  const isLocal = ['localhost','127.0.0.1'].includes(window.location.hostname);
+  const cleanBase = isLocal
+    ? window.location.origin + window.location.pathname.replace(/\/share\/.+$/,'')
+    : APP_PUBLIC_URL;
   await supabase.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: cleanBase } });
 }
 export async function logout(){
