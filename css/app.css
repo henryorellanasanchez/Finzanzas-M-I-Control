@@ -405,3 +405,7 @@ input[type=number],input[type=date],input[type=time]{font-family:var(--font-mono
 }
 .reminder-check:active{transform:scale(.85)}
 .reminder-vencido{color:var(--terracota);font-weight:600}
+.record-notes{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.record-note{display:inline-block;font-size:11px;line-height:1.35;padding:3px 7px;border-radius:999px;background:var(--bg-soft);color:var(--ink-soft)}
+.record-note.public{border:1px solid color-mix(in srgb, var(--olive) 35%, transparent)}
+.record-note.private{border:1px solid color-mix(in srgb, var(--terracota) 35%, transparent)}

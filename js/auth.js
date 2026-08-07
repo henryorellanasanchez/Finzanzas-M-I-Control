@@ -77,7 +77,16 @@ export async function logout(){
 export async function ensureProfile(){
   const { data, error } = await supabase.from('profiles').select('*').eq('id', state.session.user.id).maybeSingle();
   if(error) console.error(error);
-  if(data){ state.myProfile = data; return true; }
+  if(data){
+    if(!data.email && state.session.user.email){
+      const { data: updated } = await supabase.from('profiles')
+        .update({ email: state.session.user.email })
+        .eq('id', state.session.user.id)
+        .select().single();
+      state.myProfile = updated || data;
+    } else state.myProfile = data;
+    return true;
+  }
   return false;
 }
 
@@ -86,7 +95,7 @@ export async function saveProfileAndContinue(){
   const apellidos = document.getElementById('prof-apellidos').value.trim();
   if(!nombres || !apellidos){ toast('Completa nombres y apellidos','err'); return; }
   const { data, error } = await supabase.from('profiles')
-    .insert({ id: state.session.user.id, nombres, apellidos }).select().single();
+    .insert({ id: state.session.user.id, nombres, apellidos, email: state.session.user.email || '' }).select().single();
   if(error){ toast('No se pudo guardar tu perfil','err'); console.error(error); return; }
   state.myProfile = data;
   await afterProfileReady();
@@ -111,7 +120,13 @@ async function loadMyGroups(){
   if(error){ console.error(error); return []; }
   return (data||[])
     .filter(r=>r.finance_groups)
-    .map(r=>({ id:r.group_id, name:r.finance_groups.name, role:r.role }));
+    .map(r=>({
+      id:r.group_id,
+      name:r.finance_groups.owner_id === state.session.user.id
+        ? r.finance_groups.name
+        : `Compartidas · ${r.finance_groups.name}`,
+      role:r.role
+    }));
 }
 
 async function bootstrapPersonalGroup(){
@@ -143,8 +158,8 @@ export async function afterProfileReady(){
   try{
     const joinedGroupId = await acceptPendingInviteIfAny();
     state.myGroups = await loadMyGroups();
-    if(!state.myGroups.length){
-      state.myGroups = [await bootstrapPersonalGroup()];
+    if(!state.myGroups.some(g=>g.role==='owner')){
+      state.myGroups.unshift(await bootstrapPersonalGroup());
     }
     const saved = localStorage.getItem('active_group_id');
     const initialGroupId = (joinedGroupId && state.myGroups.some(g=>g.id===joinedGroupId)) ? joinedGroupId
@@ -171,6 +186,7 @@ export async function setActiveGroup(groupId){
 export function renderGroupSwitcher(){
   const sel = document.getElementById('group-switcher');
   if(!sel) return;
+  sel.style.display = state.myGroups.length > 1 ? '' : 'none';
   sel.innerHTML = state.myGroups.map(g=>
     `<option value="${g.id}" ${g.id===state.activeGroupId?'selected':''}>${esc(g.name)}${g.role==='viewer'?' (lectura)':''}</option>`
   ).join('');

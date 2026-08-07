@@ -2,7 +2,7 @@
    modules/gastos.js — pestaña "Gastos".
    ==================================================================== */
 import { state } from '../state.js';
-import { fmt, esc } from '../utils.js';
+import { fmt, esc, noteHtml } from '../utils.js';
 import { CAT_COLORS } from '../constants.js';
 import { registerModule } from '../registry.js';
 
@@ -39,6 +39,7 @@ export function renderGastos(){
         <div class="list-item-name">${esc(g.desc)}</div>
         <div class="list-item-meta">${g.fecha} · <span class="badge badge-gray">${esc(g.cat)}</span> <span class="badge badge-gray">${esc(g.sub)}</span> · ${esc(g.metodo)}</div>
       </div>
+      ${noteHtml(g)}
       <div style="display:flex;align-items:center;gap:8px">
         <div class="list-item-amount" style="color:var(--terracota)">−${fmt(g.monto)}</div>
         ${state.currentRole==='owner' ? `<button class="btn btn-soft btn-sm" style="padding:5px 9px;color:var(--ink-soft)" onclick="confirmDelete('gasto','${g.id}')">✕</button>` : ''}

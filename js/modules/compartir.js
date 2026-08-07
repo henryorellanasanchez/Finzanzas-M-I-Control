@@ -11,21 +11,22 @@ import { requireOwner, currentGroupName } from '../auth.js';
 
 function buildInviteLink(token){
   const base = (location.origin + location.pathname).replace(/\/$/,'').replace(/\/share\/.+$/,'');
-  return `${base}/share/${token}`;
+  // GitHub Pages no tiene rutas dinamicas; el parametro funciona tambien
+  // despues de publicar la app y se conserva durante el login de Google.
+  return `${base}?invite=${token}`;
 }
 
 export async function openShareModal(){
   if(!requireOwner()) return;
   openModal(`
-    <div class="modal-title">Compartir "${esc(currentGroupName())}"</div>
-    <div class="modal-text">Genera un enlace para invitar a alguien. Quien lo abra deberá iniciar sesión con Google para unirse.</div>
+    <div class="modal-title">Compartir tus finanzas</div>
+    <div class="modal-text">Genera un enlace único de 48 horas. Quien lo abra deberá iniciar sesión con Google.</div>
     <div class="form-row">
-      <div><label>Rol del invitado</label><select id="inv-role"><option value="viewer">Solo lectura (viewer)</option><option value="owner">Editor (owner)</option></select></div>
-      <div><label>Expira en (días, opcional)</label><input type="number" id="inv-dias" min="1" placeholder="Sin expiración"></div>
+      <div><label>Notas incluidas</label><select id="inv-notes"><option value="false">Compartir sin notas</option><option value="true">Incluir notas públicas</option></select></div>
     </div>
     <button class="btn btn-primary btn-block" onclick="crearInvitacion()">Generar enlace</button>
     <div id="inv-list" style="margin-top:14px"></div>
-    <div class="card-title" style="margin-top:18px"><div class="card-title-text">Miembros del grupo</div></div>
+    <div class="card-title" style="margin-top:18px"><div class="card-title-text">Personas con acceso</div></div>
     <div id="members-list"></div>
     <div class="modal-actions" style="margin-top:1rem"><button class="btn btn-soft" onclick="closeModal()">Cerrar</button></div>
   `);
@@ -34,13 +35,13 @@ export async function openShareModal(){
 }
 
 export async function crearInvitacion(){
-  const role = document.getElementById('inv-role').value;
-  const dias = parseInt(document.getElementById('inv-dias').value, 10);
-  const payload = { group_id: state.activeGroupId, role, created_by: state.session.user.id };
-  if(dias) payload.expires_at = new Date(Date.now() + dias*86400000).toISOString();
-  const { data, error } = await supabase.from('invitations').insert(payload).select().single();
+  const includePublicNotes = document.getElementById('inv-notes').value === 'true';
+  const { data, error } = await supabase.rpc('create_share_link', {
+    p_group_id: state.activeGroupId,
+    p_include_public_notes: includePublicNotes
+  });
   if(error){ toast('No se pudo crear la invitación','err'); console.error(error); return; }
-  try{ await navigator.clipboard.writeText(buildInviteLink(data.id)); toast('Enlace copiado al portapapeles ✓'); }
+  try{ await navigator.clipboard.writeText(buildInviteLink(data)); toast('Enlace copiado al portapapeles ✓'); }
   catch(e){ toast('Enlace generado ✓'); }
   renderInvitationsList();
 }
@@ -49,7 +50,8 @@ async function renderInvitationsList(){
   const el = document.getElementById('inv-list');
   if(!el) return;
   const { data, error } = await supabase.from('invitations')
-    .select('*').eq('group_id', state.activeGroupId).eq('revoked', false)
+    .select('*, share_link_views(viewer_id, viewed_at, last_access_at, profiles(nombres, apellidos, email))')
+    .eq('group_id', state.activeGroupId)
     .order('created_at', { ascending:false });
   if(error){ console.error(error); return; }
   if(!data || !data.length){ el.innerHTML = '<div class="empty" style="padding:10px 0">Sin enlaces activos</div>'; return; }
@@ -57,9 +59,10 @@ async function renderInvitationsList(){
     const link = buildInviteLink(inv.id);
     return `<div class="list-item">
       <div class="list-item-left">
-        <div class="list-item-name">${inv.role==='owner' ? 'Editor' : 'Solo lectura'}</div>
-        <div class="list-item-meta">${inv.expires_at ? 'Expira '+new Date(inv.expires_at).toLocaleDateString() : 'Sin expiración'}</div>
+        <div class="list-item-name">Solo lectura</div>
+        <div class="list-item-meta">${inv.revoked ? 'Revocado' : (inv.expires_at && new Date(inv.expires_at) < new Date() ? 'Enlace expirado' : 'Válido durante 48 horas')} · ${inv.include_public_notes ? 'incluye notas públicas' : 'sin notas'}</div>
         <div class="inv-link-box">${esc(link)}</div>
+        <div class="list-item-meta">${(inv.share_link_views||[]).length ? (inv.share_link_views||[]).map(v=>`Visto por ${esc(v.profiles?.nombres ? `${v.profiles.nombres} ${v.profiles.apellidos}` : (v.profiles?.email || 'cuenta Google'))} · ${new Date(v.viewed_at).toLocaleString()}`).join('<br>') : 'Pendiente de visualizar'}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <button class="btn btn-soft btn-sm" onclick="copiarEnlace('${inv.id}')">Copiar</button>

@@ -4,7 +4,7 @@
    modules/agregar.js, junto con gastos e ingresos.
    ==================================================================== */
 import { state } from '../state.js';
-import { fmt, esc, getSaldoDeuda } from '../utils.js';
+import { fmt, esc, getSaldoDeuda, noteHtml } from '../utils.js';
 import { registerModule } from '../registry.js';
 
 export function renderDeudas(){
@@ -20,6 +20,7 @@ export function renderDeudas(){
         <div>
           <div style="font-size:14px;font-weight:600">${esc(d.persona)} — ${esc(d.concepto)}</div>
           <div style="font-size:12px;color:var(--ink-soft);margin-top:3px">${esc(d.obs||'')}</div>
+          ${noteHtml(d)}
         </div>
         <span class="badge ${saldada?'badge-green':'badge-red'}">${saldada?'Saldada':'Pendiente'}</span>
       </div>

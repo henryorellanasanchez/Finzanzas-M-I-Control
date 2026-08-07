@@ -27,7 +27,7 @@ export async function renderNotas(){
   await loadNotas();
   const el = document.getElementById('lista-notas');
   if(!notas.length){
-    el.innerHTML = '<div class="empty"><div class="empty-icon">✎</div>Aún no tienes notas. Son privadas: nadie más en tus grupos las puede ver.</div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">✎</div>Aún no tienes notas privadas.</div>';
     return;
   }
   el.innerHTML = notas.map(n=>`
@@ -48,7 +48,7 @@ export async function guardarNota(){
   const contenido = contenidoEl.value.trim();
   if(!contenido){ toast('Escribe algo en la nota','err'); return; }
   const { error } = await supabase.from('notes')
-    .insert({ user_id: state.session.user.id, titulo, contenido });
+    .insert({ user_id: state.session.user.id, group_id: state.activeGroupId, titulo, contenido });
   if(error){ toast('No se pudo guardar la nota','err'); console.error(error); return; }
   tituloEl.value = '';
   contenidoEl.value = '';

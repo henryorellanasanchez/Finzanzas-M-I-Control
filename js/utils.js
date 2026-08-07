@@ -20,6 +20,13 @@ export function esc(s){
     .replace(/'/g,'&#39;');
 }
 
+export function noteHtml(record){
+  const notes = [];
+  if(record.privateNote) notes.push(`<span class="record-note private">Privada: ${esc(record.privateNote)}</span>`);
+  if(record.publicNote) notes.push(`<span class="record-note public">Pública: ${esc(record.publicNote)}</span>`);
+  return notes.length ? `<div class="record-notes">${notes.join('')}</div>` : '';
+}
+
 export function getSaldoDeuda(d){
   const pagado = state.DATA.pagos.filter(p=>p.deudaId===d.id).reduce((a,p)=>a+p.monto,0);
   return d.monto - pagado;

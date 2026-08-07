@@ -2,7 +2,7 @@
    modules/ingresos.js — pestaña "Ingresos".
    ==================================================================== */
 import { state } from '../state.js';
-import { fmt, esc } from '../utils.js';
+import { fmt, esc, noteHtml } from '../utils.js';
 import { registerModule } from '../registry.js';
 
 export function renderIngresos(){
@@ -25,6 +25,7 @@ export function renderIngresos(){
         <div class="list-item-name">${esc(i.desc)}</div>
         <div class="list-item-meta">${i.fecha} · <span class="badge badge-green">${esc(i.cat)}</span></div>
       </div>
+      ${noteHtml(i)}
       <div style="display:flex;align-items:center;gap:8px">
         <div class="list-item-amount" style="color:var(--olive)">+${fmt(i.monto)}</div>
         ${state.currentRole==='owner' ? `<button class="btn btn-soft btn-sm" style="padding:5px 9px;color:var(--ink-soft)" onclick="confirmDelete('ingreso','${i.id}')">✕</button>` : ''}

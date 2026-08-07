@@ -20,6 +20,7 @@ create table if not exists public.profiles (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+alter table public.profiles add column if not exists email text;
 
 -- ----------------------------------------------------------------------------
 -- 2. GRUPOS DE FINANZAS
@@ -55,6 +56,19 @@ create table if not exists public.invitations (
   revoked     boolean not null default false,
   created_at  timestamptz not null default now()
 );
+alter table public.invitations add column if not exists include_public_notes boolean not null default false;
+
+-- Cada apertura se registra por cuenta autenticada. La vigencia se valida
+-- siempre contra invitations, por lo que revocar o expirar corta el acceso.
+create table if not exists public.share_link_views (
+  id              uuid primary key default gen_random_uuid(),
+  invitation_id   uuid not null references public.invitations(id) on delete cascade,
+  viewer_id       uuid not null references public.profiles(id) on delete cascade,
+  viewed_at       timestamptz not null default now(),
+  last_access_at  timestamptz not null default now(),
+  unique (invitation_id, viewer_id)
+);
+create index if not exists share_link_views_invitation_idx on public.share_link_views (invitation_id, viewed_at desc);
 
 -- ----------------------------------------------------------------------------
 -- 5. GASTOS (expenses)
@@ -205,6 +219,70 @@ $$;
 grant execute on function public.is_group_member(uuid) to authenticated;
 grant execute on function public.is_group_owner(uuid) to authenticated;
 
+create or replace function public.is_shared_viewer(p_group_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.share_link_views v
+    join public.invitations i on i.id = v.invitation_id
+    where v.viewer_id = auth.uid()
+      and i.group_id = p_group_id
+      and not i.revoked
+      and i.expires_at is not null
+      and i.expires_at > now()
+  );
+$$;
+
+create or replace function public.is_shared_note_viewer(p_group_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.share_link_views v
+    join public.invitations i on i.id = v.invitation_id
+    where v.viewer_id = auth.uid()
+      and i.group_id = p_group_id
+      and i.include_public_notes
+      and not i.revoked
+      and i.expires_at is not null
+      and i.expires_at > now()
+  );
+$$;
+
+grant execute on function public.is_shared_viewer(uuid) to authenticated;
+grant execute on function public.is_shared_note_viewer(uuid) to authenticated;
+
+create or replace function public.create_share_link(p_group_id uuid, p_include_public_notes boolean default false)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  if not public.is_group_owner(p_group_id) then
+    raise exception 'Solo el propietario puede crear enlaces.';
+  end if;
+
+  insert into public.invitations (group_id, role, created_by, expires_at, include_public_notes)
+  values (p_group_id, 'viewer', auth.uid(), now() + interval '48 hours', p_include_public_notes)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+grant execute on function public.create_share_link(uuid, boolean) to authenticated;
+
 -- ============================================================================
 -- RPC: aceptar una invitación por token (usado por el flujo /share/{token})
 -- ============================================================================
@@ -231,8 +309,13 @@ begin
   end if;
 
   insert into public.group_members (group_id, user_id, role)
-  values (v_inv.group_id, auth.uid(), v_inv.role)
+  values (v_inv.group_id, auth.uid(), 'viewer')
   on conflict (group_id, user_id) do nothing;
+
+  insert into public.share_link_views (invitation_id, viewer_id, viewed_at, last_access_at)
+  values (v_inv.id, auth.uid(), now(), now())
+  on conflict (invitation_id, viewer_id)
+  do update set last_access_at = now();
 
   return query
     select fg.id, gm.role, fg.name
@@ -256,6 +339,7 @@ alter table public.incomes         enable row level security;
 alter table public.debts           enable row level security;
 alter table public.debt_payments   enable row level security;
 alter table public.budgets         enable row level security;
+alter table public.share_link_views enable row level security;
 
 -- ---------- profiles ----------
 drop policy if exists "select own or co-member profile" on public.profiles;
@@ -377,8 +461,8 @@ create policy "owner manages invitations" on public.invitations
   for select using (public.is_group_owner(group_id) or created_by = auth.uid());
 
 drop policy if exists "owner creates invitations" on public.invitations;
-create policy "owner creates invitations" on public.invitations
-  for insert with check (public.is_group_owner(group_id) and created_by = auth.uid());
+-- Los enlaces se crean únicamente mediante create_share_link(), que fija
+-- el vencimiento de 48 horas en la base de datos.
 
 drop policy if exists "owner updates invitations" on public.invitations;
 create policy "owner updates invitations" on public.invitations
@@ -387,6 +471,17 @@ create policy "owner updates invitations" on public.invitations
 drop policy if exists "owner deletes invitations" on public.invitations;
 create policy "owner deletes invitations" on public.invitations
   for delete using (public.is_group_owner(group_id));
+
+drop policy if exists "owner or viewer reads share views" on public.share_link_views;
+create policy "owner or viewer reads share views" on public.share_link_views
+  for select using (
+    viewer_id = auth.uid()
+    or exists (
+      select 1 from public.invitations i
+      join public.finance_groups fg on fg.id = i.group_id
+      where i.id = invitation_id and fg.owner_id = auth.uid()
+    )
+  );
 
 -- ---------- expenses / incomes / debts / debt_payments / budgets ----------
 -- Mismo patrón para las 5 tablas transaccionales: cualquier miembro puede
@@ -399,7 +494,7 @@ begin
     execute format('drop policy if exists "members select %1$s" on public.%1$s', t);
     execute format($f$
       create policy "members select %1$s" on public.%1$s
-        for select using (public.is_group_member(group_id));
+        for select using (public.is_group_owner(group_id) or public.is_shared_viewer(group_id));
     $f$, t);
 
     execute format('drop policy if exists "owner inserts %1$s" on public.%1$s', t);
@@ -423,6 +518,44 @@ begin
 end $$;
 
 -- ----------------------------------------------------------------------------
+-- 10. NOTAS POR REGISTRO: separadas de los movimientos para que una nota
+-- privada nunca pueda salir en una consulta compartida.
+-- ----------------------------------------------------------------------------
+create table if not exists public.record_notes (
+  id            uuid primary key default gen_random_uuid(),
+  record_type   text not null check (record_type in ('expense','income','debt','payment','budget')),
+  record_id     uuid not null,
+  group_id      uuid not null references public.finance_groups(id) on delete cascade,
+  owner_id      uuid not null references public.profiles(id) on delete cascade,
+  visibility    text not null check (visibility in ('private','public')),
+  content       text not null,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  unique (record_type, record_id, visibility)
+);
+create index if not exists record_notes_group_idx on public.record_notes (group_id, record_type, record_id);
+alter table public.record_notes enable row level security;
+
+drop policy if exists "read permitted record notes" on public.record_notes;
+create policy "read permitted record notes" on public.record_notes
+  for select using (
+    (owner_id = auth.uid())
+    or (visibility = 'public' and public.is_shared_note_viewer(group_id))
+  );
+
+drop policy if exists "owner creates record notes" on public.record_notes;
+create policy "owner creates record notes" on public.record_notes
+  for insert with check (owner_id = auth.uid() and public.is_group_owner(group_id));
+
+drop policy if exists "owner updates record notes" on public.record_notes;
+create policy "owner updates record notes" on public.record_notes
+  for update using (owner_id = auth.uid() and public.is_group_owner(group_id));
+
+drop policy if exists "owner deletes record notes" on public.record_notes;
+create policy "owner deletes record notes" on public.record_notes
+  for delete using (owner_id = auth.uid() and public.is_group_owner(group_id));
+
+-- ----------------------------------------------------------------------------
 -- 10. NOTAS PERSONALES — NO se comparten ni con miembros del mismo grupo.
 -- Por eso esta tabla usa user_id en vez de group_id, y sus políticas RLS no
 -- referencian group_members en absoluto: solo el dueño de la fila puede
@@ -431,12 +564,22 @@ end $$;
 create table if not exists public.notes (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references public.profiles(id) on delete cascade,
+  group_id    uuid references public.finance_groups(id) on delete cascade,
   titulo      text,
   contenido   text not null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+alter table public.notes add column if not exists group_id uuid references public.finance_groups(id) on delete cascade;
+update public.notes n
+set group_id = (
+  select gm.group_id from public.group_members gm
+  where gm.user_id = n.user_id and gm.role = 'owner'
+  order by gm.joined_at asc limit 1
+)
+where n.group_id is null;
 create index if not exists notes_user_idx on public.notes (user_id, created_at desc);
+create index if not exists notes_group_idx on public.notes (group_id, created_at desc);
 
 drop trigger if exists trg_notes_updated on public.notes;
 create trigger trg_notes_updated before update on public.notes
