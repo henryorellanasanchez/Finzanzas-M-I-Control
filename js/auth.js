@@ -115,12 +115,26 @@ async function loadMyGroups(){
 }
 
 async function bootstrapPersonalGroup(){
-  const { data: group, error: e1 } = await supabase.from('finance_groups')
-    .insert({ name:'Mis finanzas', owner_id: state.session.user.id }).select().single();
-  if(e1){ console.error(e1); throw e1; }
+  // Si el primer intento llegó a insertar el grupo pero falló al devolverlo
+  // por RLS, reutilizamos ese grupo en vez de crear duplicados.
+  const { data: existing, error: lookupError } = await supabase.from('finance_groups')
+    .select('id, name, owner_id')
+    .eq('owner_id', state.session.user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if(lookupError){ console.error(lookupError); throw lookupError; }
+
+  let group = existing;
+  if(!group){
+    const { data: created, error: e1 } = await supabase.from('finance_groups')
+      .insert({ name:'Mis finanzas', owner_id: state.session.user.id }).select('id, name, owner_id').single();
+    if(e1){ console.error(e1); throw e1; }
+    group = created;
+  }
   const { error: e2 } = await supabase.from('group_members')
     .insert({ group_id: group.id, user_id: state.session.user.id, role:'owner' });
-  if(e2){ console.error(e2); throw e2; }
+  if(e2 && e2.code !== '23505'){ console.error(e2); throw e2; }
   return { id: group.id, name: group.name, role:'owner' };
 }
 

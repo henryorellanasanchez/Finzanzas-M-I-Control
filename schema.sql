@@ -280,7 +280,7 @@ create policy "update own profile" on public.profiles
 -- ---------- finance_groups ----------
 drop policy if exists "members select their groups" on public.finance_groups;
 create policy "members select their groups" on public.finance_groups
-  for select using (public.is_group_member(id));
+  for select using (owner_id = auth.uid() or public.is_group_member(id));
 
 drop policy if exists "users create groups they own" on public.finance_groups;
 create policy "users create groups they own" on public.finance_groups
