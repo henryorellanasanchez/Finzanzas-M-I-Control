@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Michael &amp; Ivana · Control</title>
+
+<!-- Color de la barra del navegador / status bar; se actualiza en tiempo real
+     desde theme.js cuando el usuario cambia de tema (no solo sigue al SO) -->
+<meta name="theme-color" id="meta-theme-color" content="#F7F3EA">
+<meta name="color-scheme" content="light dark">
+
+<!-- iOS: permite "Agregar a inicio" a pantalla completa, respetando notch/Dynamic Island -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="M&amp;I Control">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
+
+<!-- Android: soporte PWA / ícono adaptativo -->
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/app.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="auth-gate" id="auth-gate" style="display:none"></div>
+<div class="app" id="app-root" style="display:none">
+
+  <div class="app-header">
+    <div class="brand-lockup">
+      <div class="brand-logo-wrap"><img class="brand-logo" src="./icons/michael-ivana-control.png" alt="Logo M&amp;I Control"></div>
+      <div>
+        <div class="app-title">Michael &amp; Ivana</div>
+        <div class="app-sub" id="header-sub">Control financiero compartido</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <select class="group-select" id="group-switcher" onchange="onGroupSwitch()" title="Cambiar de grupo"></select>
+      <button class="icon-btn" id="btn-share" onclick="openShareModal()" data-i18n-title="share" style="display:none">🔗</button>
+      <button class="icon-btn" id="btn-account" onclick="openAccountModal()" data-i18n-title="account">👤</button>
+      <select class="theme-mode" id="theme-mode" onchange="changeThemeMode(this.value)" data-i18n-title="theme" aria-label="Tema">
+        <option value="system" data-i18n="themeSystem">Sistema</option>
+        <option value="light" data-i18n="themeLight">Claro</option>
+        <option value="dark" data-i18n="themeDark">Oscuro</option>
+      </select>
+      <select class="language-switcher" id="language-switcher" onchange="changeLanguage(this.value)" data-i18n-title="language" aria-label="Idioma">
+        <option value="es" data-i18n="spanish">Español</option>
+        <option value="en" data-i18n="english">English</option>
+      </select>
+      <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" data-i18n-title="toggleTheme">◐</button>
+      <button class="icon-btn" onclick="showExportModal()" data-i18n-title="exportData">⇩</button>
+    </div>
+  </div>
+  <div class="viewer-banner" id="viewer-banner" data-i18n="systemReadOnly">👁 Estás viendo este grupo en modo solo lectura — no puedes agregar, editar ni eliminar registros.</div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="dashboard" onclick="showTab('dashboard')" data-i18n="summary">Resumen</div>
+    <div class="tab" data-tab="agregar" onclick="showTab('agregar')" data-i18n="add">Agregar</div>
+    <div class="tab" data-tab="gastos" onclick="showTab('gastos')" data-i18n="expenses">Gastos</div>
+    <div class="tab" data-tab="ingresos" onclick="showTab('ingresos')" data-i18n="income">Ingresos</div>
+    <div class="tab" data-tab="deudas" onclick="showTab('deudas')" data-i18n="debts">Deudas</div>
+    <div class="tab" data-tab="presupuestos" onclick="showTab('presupuestos')" data-i18n="budgets">Presupuestos</div>
+    <div class="tab" data-tab="mensual" onclick="showTab('mensual')" data-i18n="monthly">Mensual</div>
+    <div class="tab" data-tab="notas" onclick="showTab('notas')" data-i18n="notes">Notas</div>
+    <div class="tab" data-tab="recordatorios" onclick="showTab('recordatorios')" data-i18n="reminders">Recordatorios</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="section active" id="sec-dashboard">
+    <div class="welcome-card">
+      <div>
+        <span class="eyebrow" data-i18n="balanceEyebrow">Nuestro dinero, en equilibrio</span>
+        <h1><span data-i18n="planTogether">Planifiquen juntos.</span><br><em data-i18n="moveTogether">Avancen juntos.</em></h1>
+        <p data-i18n="welcomeText">Un espacio claro para cuidar cada ingreso, gasto y meta de Michael &amp; Ivana.</p>
+      </div>
+      <div class="welcome-orbit"><img src="./icons/michael-ivana-control.png" alt="M&amp;I Control"></div>
+    </div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <div id="alert-zone"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><div class="card-title-text" data-i18n="expensesByCategory">Gastos por categoría</div><span class="muted" id="donut-total"></span></div>
+        <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-text" data-i18n="incomeVsExpenses">Ingresos vs gastos</div><span class="muted" id="trend-year-label" data-i18n="historical">Histórico</span></div>
+        <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="card-title-text" data-i18n="activeDebts">Deudas activas</div></div>
+      <div id="bank-progress"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-text" data-i18n="recentMovements">Movimientos recientes</div>
+        <a href="#" onclick="showTab('gastos');return false" data-i18n="seeAll" style="font-size:11.5px;color:var(--olive);text-decoration:none;font-weight:600">Ver todos →</a>
+      </div>
+      <div id="recent-list"></div>
+    </div>
+  </div>
+
+  <!-- AGREGAR -->
+  <div class="section" id="sec-agregar">
+    <div class="card">
+      <div class="card-title transaction-heading">
+        <div class="card-title-text"><span class="section-logo"><img src="./icons/michael-ivana-control.png" alt=""></span><span data-i18n="whatRegister">¿Qué quieren registrar?</span></div>
+        <span class="card-kicker" data-i18n="movements">M&amp;I · MOVIMIENTOS</span>
+      </div>
+      <div class="type-selector" id="tipo-selector">
+        <button class="type-btn active gasto" data-tipo="gasto" onclick="setTipo('gasto')">🧾 <span data-i18n="expense">Gasto</span></button>
+        <button class="type-btn ingreso" data-tipo="ingreso" onclick="setTipo('ingreso')">💰 <span data-i18n="incomeType">Ingreso</span></button>
+        <button class="type-btn deuda" data-tipo="deuda" onclick="setTipo('deuda')">📋 <span data-i18n="newDebt">Nueva deuda</span></button>
+        <button class="type-btn pago" data-tipo="pago" onclick="setTipo('pago')">💳 <span data-i18n="payDebt">Pagar deuda</span></button>
+        <button class="type-btn vest" data-tipo="vest" onclick="setTipo('vest')">👕 <span data-i18n="clothing">Vestimenta</span></button>
+      </div>
+
+      <!-- GASTO / VESTIMENTA -->
+      <div id="form-gasto" style="display:none">
+        <div class="form-row">
+          <div><label>Mes</label><select id="g-mes"></select></div>
+          <div><label>Fecha</label><input type="date" id="g-fecha"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Categoría</label><select id="g-cat" onchange="updateSubcat()"></select></div>
+          <div><label>Subcategoría</label><select id="g-subcat"></select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Arroba de arroz"></div>
+          <div><label>Monto ($)</label><input type="number" id="g-monto" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Método de pago</label><select id="g-metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Débito</option></select></div>
+          <div><label>Observaciones</label><input type="text" id="g-obs" placeholder="Opcional"></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="guardarGasto()">Guardar gasto</button>
+      </div>
+
+      <!-- INGRESO -->
+      <div id="form-ingreso" style="display:none">
+        <div class="form-row">
+          <div><label>Mes</label><select id="i-mes"></select></div>
+          <div><label>Fecha</label><input type="date" id="i-fecha"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Categoría</label><select id="i-cat"><option>Trabajo</option><option>Extra</option><option>Freelance</option><option>Negocio</option><option>Otros</option></select></div>
+          <div><label>Monto ($)</label><input type="number" id="i-monto" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="form-row full">
+          <div><label>Descripción / Observaciones</label><input type="text" id="i-desc" placeholder="Ej: Ingreso trabajo estable"></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="guardarIngreso()">Guardar ingreso</button>
+      </div>
+
+      <!-- NUEVA DEUDA -->
+      <div id="form-deuda" style="display:none">
+        <div class="form-row">
+          <div><label>Persona / Entidad</label><input type="text" id="d-persona" placeholder="Ej: Banco, Daniela"></div>
+          <div><label>Concepto</label><input type="text" id="d-concepto" placeholder="Ej: Préstamo personal"></div>
+        </div>
+        <div class="form-row tri">
+          <div><label>Monto inicial ($)</label><input type="number" id="d-monto" min="0" step="0.01" placeholder="0.00"></div>
+          <div><label>Cuota mensual ($)</label><input type="number" id="d-cuota" min="0" step="0.01" placeholder="0.00"></div>
+          <div><label>Tipo</label><select id="d-tipo"><option>Debo</option><option>Me deben</option></select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Fecha inicio</label><input type="date" id="d-inicio"></div>
+          <div><label>Observaciones</label><input type="text" id="d-obs" placeholder="Opcional"></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="guardarDeuda()">Crear deuda</button>
+      </div>
+
+      <!-- PAGAR DEUDA -->
+      <div id="form-pago" style="display:none">
+        <div class="form-row">
+          <div><label>Deuda a pagar</label><select id="p-deuda"></select></div>
+          <div><label>Monto a abonar ($)</label><input type="number" id="p-monto" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Fecha del pago</label><input type="date" id="p-fecha"></div>
+          <div><label>Método</label><select id="p-metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option></select></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="guardarPago()">Registrar pago</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GASTOS -->
+  <div class="section" id="sec-gastos">
+    <div class="section-header">
+      <h2 data-i18n="allExpenses">Todos los gastos</h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div class="search-box"><input type="text" id="busca-gas" placeholder="Buscar…" style="width:140px" oninput="renderGastos()"></div>
+        <select id="filtro-anio-gas" class="filter-select" onchange="renderGastos()"></select>
+        <select id="filtro-mes-gas" class="filter-select" onchange="renderGastos()"></select>
+        <select id="filtro-cat-gas" class="filter-select" onchange="renderGastos()">
+          <option value="" data-i18n="allCategories">Todas las categorías</option>
+        </select>
+      </div>
+    </div>
+    <div class="stat-strip" id="gastos-cat-strip"></div>
+    <div class="card" id="lista-gastos"></div>
+    <div style="text-align:right;margin-top:10px;display:flex;justify-content:flex-end;gap:16px;align-items:center">
+      <button class="btn btn-soft btn-sm" onclick="exportCSV('gastos')" data-i18n="exportCsv">Exportar CSV</button>
+      <span style="font-size:13px;color:var(--ink-soft)"><span data-i18n="totalFiltered">Total filtrado:</span> <span style="font-size:15px;font-weight:600;color:var(--ink);font-family:var(--font-mono)" id="total-gas-filtrado">$0.00</span></span>
+    </div>
+  </div>
+
+  <!-- INGRESOS -->
+  <div class="section" id="sec-ingresos">
+    <div class="section-header">
+      <h2 data-i18n="allIncome">Todos los ingresos</h2>
+      <div style="display:flex;gap:6px">
+        <div class="search-box"><input type="text" id="busca-ing" placeholder="Buscar…" style="width:140px" oninput="renderIngresos()"></div>
+        <select id="filtro-anio-ing" class="filter-select" onchange="renderIngresos()"></select>
+        <select id="filtro-mes-ing" class="filter-select" onchange="renderIngresos()"></select>
+      </div>
+    </div>
+    <div class="card" id="lista-ingresos"></div>
+    <div style="text-align:right;margin-top:10px;display:flex;justify-content:flex-end;gap:16px;align-items:center">
+      <button class="btn btn-soft btn-sm" onclick="exportCSV('ingresos')" data-i18n="exportCsv">Exportar CSV</button>
+      <span style="font-size:13px;color:var(--ink-soft)"><span data-i18n="totalFiltered">Total filtrado:</span> <span style="font-size:15px;font-weight:600;color:var(--olive);font-family:var(--font-mono)" id="total-ing-filtrado">$0.00</span></span>
+    </div>
+  </div>
+
+  <!-- DEUDAS -->
+  <div class="section" id="sec-deudas">
+    <div class="section-header"><h2 data-i18n="activeDebtsTitle">Deudas activas</h2></div>
+    <div id="lista-deudas"></div>
+    <div class="card" style="margin-top:1rem">
+      <div class="card-title"><div class="card-title-text" data-i18n="paymentHistory">Historial de pagos</div></div>
+      <div id="historial-pagos"></div>
+    </div>
+  </div>
+
+  <!-- PRESUPUESTOS -->
+  <div class="section" id="sec-presupuestos">
+    <div class="section-header"><h2 data-i18n="monthlyBudgets">Presupuestos mensuales</h2></div>
+    <div class="card">
+      <div class="card-title"><div class="card-title-text">Definir límite por categoría</div></div>
+      <div class="form-row">
+        <div><label>Categoría</label><select id="b-cat"></select></div>
+        <div><label>Límite mensual ($)</label><input type="number" id="b-monto" min="0" step="1" placeholder="Ej: 100"></div>
+      </div>
+      <button class="btn btn-primary" onclick="guardarPresupuesto()">Guardar límite</button>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="card-title-text">Progreso del mes actual</div><span class="muted" id="presu-mes-label"></span></div>
+      <div id="lista-presupuestos"></div>
+    </div>
+  </div>
+
+  <!-- MENSUAL -->
+  <div class="section" id="sec-mensual">
+    <div class="section-header">
+      <h2 data-i18n="monthlySummary">Resumen mensual <span id="mensual-anio-label"></span></h2>
+      <select id="filtro-anio-mensual" class="filter-select" onchange="renderMensual()"></select>
+    </div>
+    <div class="card">
+      <div class="chart-wrap" style="margin-bottom:1rem"><canvas id="chart-mensual-bar"></canvas></div>
+      <table class="month-table">
+        <thead><tr>
+          <th>Mes</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Gastos</th><th style="text-align:right">Deudas</th><th style="text-align:right">Saldo</th><th style="text-align:right">Acum.</th>
+        </tr></thead>
+        <tbody id="tabla-mensual"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section" id="sec-notas">
+    <div class="section-header"><h2 data-i18n="privateNotes">Notas privadas</h2></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><div class="card-title-text" data-i18n="newNote">Nueva nota</div></div>
+      <p style="font-size:12px;color:var(--ink-soft);margin:-6px 0 10px">Solo tú la ves, aunque este grupo sea compartido.</p>
+      <input type="text" id="nota-titulo" placeholder="Título (opcional)" style="margin-bottom:8px">
+      <textarea id="nota-contenido" rows="3" placeholder="Escribe tu nota…" style="width:100%;resize:vertical"></textarea>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="guardarNota()">Guardar nota</button>
+    </div>
+    <div id="lista-notas"></div>
+  </div>
+
+  <!-- RECORDATORIOS -->
+  <div class="section" id="sec-recordatorios">
+    <div class="section-header"><h2 data-i18n="reminders">Recordatorios</h2></div>
+
+    <div id="gcal-status" style="margin-bottom:14px"></div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><div class="card-title-text" data-i18n="newReminder">Nuevo recordatorio</div></div>
+      <div class="form-row full">
+        <div><label>Título</label><input type="text" id="rec-titulo" placeholder="Ej: Pagar tarjeta de crédito"></div>
+      </div>
+      <div class="form-row full">
+        <div><label>Descripción (opcional)</label><textarea id="rec-desc" rows="2" placeholder="Detalles adicionales…" style="width:100%;resize:vertical"></textarea></div>
+      </div>
+      <div class="form-row tri">
+        <div><label>Fecha</label><input type="date" id="rec-fecha"></div>
+        <div><label>Hora (opcional)</label><input type="time" id="rec-hora"></div>
+        <div><label>Prioridad</label><select id="rec-prioridad"><option value="alta">Alta</option><option value="media" selected>Media</option><option value="baja">Baja</option></select></div>
+      </div>
+      <label class="check-row">
+        <input type="checkbox" id="rec-sync" onchange="toggleSyncCheckbox()">
+        <span>📅 Agregar también a Google Calendar</span>
+      </label>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="guardarRecordatorio()">Guardar recordatorio</button>
+    </div>
+
+    <div id="lista-recordatorios"></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+<button class="fab-add" id="fab-add" onclick="showTab('agregar')" title="Agregar movimiento">+</button>
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
