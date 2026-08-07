@@ -27,7 +27,7 @@ test('configuración de despliegue y Service Worker están sincronizados', () =>
   const vercel = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8'));
   assert.ok(vercel.rewrites.some(item => item.source === '/share/:token'));
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(sw, /finanzas-shell-v5/);
+  assert.match(sw, /finanzas-shell-v6/);
   assert.match(sw, /\.\/js\/googleCalendar\.js/);
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(index, /mi-control\.png\?v=5/);
