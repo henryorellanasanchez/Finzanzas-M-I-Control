@@ -7,7 +7,7 @@ import { supabase } from '../config.js';
 import { state } from '../state.js';
 import { esc, fmt, toast, getSaldoDeuda, fechaLocalISO, fechaISOValida } from '../utils.js';
 import { positiveAmount } from '../finance.js';
-import { CATS_GASTO, MESES, MESES_KEYS } from '../constants.js';
+import { CATS_GASTO } from '../constants.js';
 import { requireOwner } from '../auth.js';
 import { loadAllData } from '../dataLayer.js';
 import { registerModule } from '../registry.js';
@@ -49,6 +49,7 @@ export function setTipo(t){
     document.getElementById('form-ingreso').style.display='block';
     const fecha = document.getElementById('i-fecha');
     if(!fecha.value) fecha.value = fechaLocalISO();
+    populateAccountSelects();
   }
   if(t==='deuda'){ document.getElementById('form-deuda').style.display='block'; }
   if(t==='pago'){ document.getElementById('form-pago').style.display='block'; populatePagoDeuda(); }
@@ -74,7 +75,7 @@ export function initGastoForm(isVest){
   catSel.innerHTML = Object.keys(cats).map(c=>`<option>${esc(c)}</option>`).join('');
   if(isVest) catSel.value = 'Vestimenta';
   updateSubcat(cats);
-  populateMes('g-mes');
+  populateAccountSelects();
   document.getElementById('g-fecha').value = fechaLocalISO();
 }
 
@@ -85,8 +86,15 @@ export function updateSubcat(cats){
   document.getElementById('g-subcat').innerHTML = subs.map(s=>`<option>${esc(s)}</option>`).join('');
 }
 
-export function populateMes(id){
-  document.getElementById(id).innerHTML = MESES.map((m,i)=>`<option value="${MESES_KEYS[i]}">${m}</option>`).join('');
+export function populateAccountSelects(){
+  const options = ['<option value="">Sin cuenta asignada</option>', ...state.DATA.cuentas.map(account=>`<option value="${account.id}">${esc(account.name)} · ${esc(account.type)}</option>`)].join('');
+  ['g-cuenta','i-cuenta','p-cuenta'].forEach(id=>{
+    const select = document.getElementById(id);
+    if(!select) return;
+    const previous = select.value;
+    select.innerHTML = options;
+    select.value = state.DATA.cuentas.some(account=>account.id===previous) ? previous : '';
+  });
 }
 
 async function saveRecordNotes(recordType, recordId, privateId, publicId){
@@ -115,6 +123,7 @@ export function populatePagoDeuda(){
     return `<option value="${d.id}">${esc(d.persona)} — ${esc(d.concepto)} (saldo: ${fmt(saldo)})</option>`;
   }).join('');
   if(!pendientes.length) sel.innerHTML = '<option value="">No hay deudas pendientes</option>';
+  populateAccountSelects();
   document.getElementById('p-fecha').value = fechaLocalISO();
 }
 
@@ -133,7 +142,8 @@ export async function guardarGasto(){
     subcategoria: document.getElementById('g-subcat').value,
     descripcion: document.getElementById('g-desc').value || document.getElementById('g-subcat').value,
     monto, metodo: document.getElementById('g-metodo').value,
-    observaciones: document.getElementById('g-obs').value
+    observaciones: document.getElementById('g-obs').value,
+    account_id: document.getElementById('g-cuenta').value || null
   };
   const { data: created, error } = await supabase.from('expenses').insert(payload).select('id').single();
   if(error){ toast('No se pudo guardar el gasto','err'); console.error(error); return; }
@@ -162,7 +172,8 @@ export async function guardarIngreso(){
     fecha,
     categoria: document.getElementById('i-cat').value,
     descripcion: document.getElementById('i-desc').value || 'Ingreso',
-    monto, observaciones: document.getElementById('i-obs').value.trim()
+    monto, observaciones: document.getElementById('i-obs').value.trim(),
+    account_id: document.getElementById('i-cuenta').value || null
   };
   const { data: created, error } = await supabase.from('incomes').insert(payload).select('id').single();
   if(error){ toast('No se pudo guardar el ingreso','err'); console.error(error); return; }
@@ -226,7 +237,7 @@ export async function guardarPago(){
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id, debt_id: deudaId, monto,
     fecha,
-    metodo: document.getElementById('p-metodo').value, observaciones:'Abono'
+    metodo: document.getElementById('p-metodo').value, observaciones:'Abono', account_id: document.getElementById('p-cuenta').value || null
   };
   const { data: created, error } = await supabase.from('debt_payments').insert(payload).select('id').single();
   if(error){ toast('No se pudo registrar el pago','err'); console.error(error); return; }
@@ -243,4 +254,4 @@ export async function guardarPago(){
   } finally { endSave('form-pago'); }
 }
 
-registerModule({ id: 'agregar', ownerOnly: true, render: null });
+registerModule({ id: 'agregar', ownerOnly: true, render: ()=>setTipo(state.tipoActivo || 'gasto') });

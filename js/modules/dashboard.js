@@ -9,6 +9,7 @@ import { financialSummary, monthlyTotals } from '../finance.js';
 import { MESES, CAT_COLORS } from '../constants.js';
 import { registerModule } from '../registry.js';
 import { checkAlertasPresupuesto } from './presupuestos.js';
+import { checkPlanningAlerts } from './planificacion.js';
 
 function calcKPIs(){
   return financialSummary(state.DATA, getSaldoDeuda);
@@ -130,6 +131,7 @@ export function renderDashboard(){
   `;
 
   checkAlertasPresupuesto();
+  checkPlanningAlerts();
   renderDonutChart();
   renderTrendChart();
 

@@ -49,6 +49,7 @@ import './modules/gastos.js';
 import './modules/ingresos.js';
 import './modules/deudas.js';
 import './modules/presupuestos.js';
+import './modules/planificacion.js';
 import './modules/mensual.js';
 import './modules/notas.js';
 import './modules/recordatorios.js';
@@ -62,6 +63,7 @@ import { openShareModal, crearInvitacion, copiarEnlace, revocarInvitacion, quita
 import { renderGastos } from './modules/gastos.js';
 import { renderIngresos } from './modules/ingresos.js';
 import { renderMensual } from './modules/mensual.js';
+import { renderPlanificacion, guardarCuenta, conciliarCuenta, eliminarCuenta, guardarMeta, aportarMeta, eliminarMeta, guardarRecurrente, toggleRecurrente, eliminarRecurrente, aplicarRecurrentesMes, renderRecurringCategory } from './modules/planificacion.js';
 import { setTipo, updateSubcat, guardarGasto, guardarIngreso, guardarDeuda, guardarPago } from './modules/agregar.js';
 import { guardarPresupuesto, eliminarPresupuesto } from './modules/presupuestos.js';
 import { guardarNota, eliminarNota } from './modules/notas.js';
@@ -87,6 +89,9 @@ Object.assign(window, {
   guardarPresupuesto, eliminarPresupuesto,
   // mensual
   renderMensual,
+  // planificación
+  renderPlanificacion, guardarCuenta, conciliarCuenta, eliminarCuenta, guardarMeta, aportarMeta, eliminarMeta,
+  guardarRecurrente, toggleRecurrente, eliminarRecurrente, aplicarRecurrentesMes, renderRecurringCategory,
   // notas (privadas, no se comparten con el grupo)
   guardarNota, eliminarNota,
   // recordatorios (privados) + sincronización con Google Calendar
@@ -112,6 +117,7 @@ function initStaticUI(){
   document.getElementById('g-fecha').value = today;
   document.getElementById('i-fecha').value = today;
   document.getElementById('rec-fecha').value = today;
+  document.getElementById('recurr-inicio').value = today;
 
   const gasOpts = Object.keys(getCategories()).map(c=>`<option>${esc(c)}</option>`).join('');
   document.getElementById('filtro-cat-gas').innerHTML = `<option value="">${t('allCategories')}</option>`+gasOpts;

@@ -27,14 +27,26 @@ test('configuración de despliegue y Service Worker están sincronizados', () =>
   const vercel = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8'));
   assert.ok(vercel.rewrites.some(item => item.source === '/share/:token'));
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(sw, /finanzas-shell-v7/);
+  assert.match(sw, /finanzas-shell-v8/);
   assert.match(sw, /\.\/js\/finance\.js/);
+  assert.match(sw, /\.\/js\/modules\/planificacion\.js/);
   assert.match(sw, /\.\/js\/googleCalendar\.js/);
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(index, /mi-control\.png\?v=5/);
   assert.match(index, /id="connection-banner"/);
   assert.doesNotMatch(index, /id="i-mes"/);
   assert.match(index, /id="i-obs"/);
+});
+
+test('la migración de planificación protege metas, cuentas y recurrencias con RLS', () => {
+  const migration = fs.readFileSync(path.join(root, 'supabase-planning-update.sql'), 'utf8');
+  for (const table of ['financial_accounts', 'financial_goals', 'goal_contributions', 'recurring_transactions']) {
+    assert.match(migration, new RegExp(`alter table public\\.${table} enable row level security`));
+  }
+  assert.match(migration, /members select %1\$s/);
+  assert.match(migration, /owner inserts %1\$s/);
+  assert.match(migration, /expenses_recurring_once_idx/);
+  assert.match(migration, /validate_planning_references/);
 });
 
 test('el servidor no expone rutas fuera del workspace', () => {

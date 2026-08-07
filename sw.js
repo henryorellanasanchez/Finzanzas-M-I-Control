@@ -19,7 +19,7 @@
    para que los usuarios reciban la versión nueva en vez de la cacheada.
    ==================================================================== */
 
-const CACHE_NAME = 'finanzas-shell-v7';
+const CACHE_NAME = 'finanzas-shell-v8';
 
 const PRECACHE_URLS = [
   './',
@@ -48,6 +48,7 @@ const PRECACHE_URLS = [
   './js/modules/ingresos.js',
   './js/modules/mensual.js',
   './js/modules/notas.js',
+  './js/modules/planificacion.js',
   './js/modules/presupuestos.js',
   './js/modules/recordatorios.js',
   './js/modules/registros.js',

@@ -6,7 +6,7 @@
    ==================================================================== */
 
 export const state = {
-  DATA: { gastos: [], ingresos: [], deudas: [], pagos: [], presupuestos: [] },
+  DATA: { gastos: [], ingresos: [], deudas: [], pagos: [], presupuestos: [], cuentas: [], metas: [], aportesMetas: [], recurrentes: [] },
   categories: {},
   customCategories: [],
   session: null,

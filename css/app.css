@@ -267,6 +267,8 @@ input[type=number],input[type=date],input[type=time]{font-family:var(--font-mono
 
 .chart-wrap{position:relative;height:220px}
 .chart-wrap.small{height:160px}
+.planning-help{font-size:12px;color:var(--ink-soft);line-height:1.45;margin:-6px 0 12px}
+.planning-list{margin-top:16px;border-top:1px solid var(--line)}
 
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 @media (max-width:640px){.grid-2{grid-template-columns:1fr}.app{padding-left:calc(.75rem + env(safe-area-inset-left,0px));padding-right:calc(.75rem + env(safe-area-inset-right,0px))}.app-title{font-size:22px}}

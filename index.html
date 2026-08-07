@@ -72,6 +72,7 @@
     <div class="tab" data-tab="ingresos" onclick="showTab('ingresos')" data-i18n="income">Ingresos</div>
     <div class="tab" data-tab="deudas" onclick="showTab('deudas')" data-i18n="debts">Deudas</div>
     <div class="tab" data-tab="presupuestos" onclick="showTab('presupuestos')" data-i18n="budgets">Presupuestos</div>
+    <div class="tab" data-tab="planificacion" onclick="showTab('planificacion')" data-i18n="planning">Planificación</div>
     <div class="tab" data-tab="mensual" onclick="showTab('mensual')" data-i18n="monthly">Mensual</div>
     <div class="tab" data-tab="notas" onclick="showTab('notas')" data-i18n="notes">Notas</div>
     <div class="tab" data-tab="recordatorios" onclick="showTab('recordatorios')" data-i18n="reminders">Recordatorios</div>
@@ -134,8 +135,8 @@
       <!-- GASTO / VESTIMENTA -->
       <div id="form-gasto" style="display:none">
         <div class="form-row">
-          <div><label>Mes</label><select id="g-mes"></select></div>
           <div><label>Fecha</label><input type="date" id="g-fecha"></div>
+          <div><label>Cuenta</label><select id="g-cuenta"></select></div>
         </div>
         <div class="form-row">
           <div><label>Categoría</label><select id="g-cat" onchange="updateSubcat()"></select></div>
@@ -164,6 +165,7 @@
         </div>
         <div class="form-row">
           <div><label>Monto ($)</label><input type="number" id="i-monto" min="0" step="0.01" placeholder="0.00"></div>
+          <div><label>Cuenta</label><select id="i-cuenta"></select></div>
         </div>
         <div class="form-row full">
           <div><label>Descripción</label><input type="text" id="i-desc" placeholder="Ej: Pago de trabajo de agosto"></div>
@@ -198,6 +200,9 @@
         </div>
         <div class="form-row">
           <div><label>Fecha del pago</label><input type="date" id="p-fecha"></div>
+          <div><label>Cuenta</label><select id="p-cuenta"></select></div>
+        </div>
+        <div class="form-row full">
           <div><label>Método</label><select id="p-metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option></select></div>
         </div>
         <button class="btn btn-primary btn-block" onclick="guardarPago()">Registrar pago</button>
@@ -267,6 +272,49 @@
     <div class="card">
       <div class="card-title"><div class="card-title-text">Progreso del mes actual</div><span class="muted" id="presu-mes-label"></span></div>
       <div id="lista-presupuestos"></div>
+    </div>
+  </div>
+
+  <!-- PLANIFICACIÓN -->
+  <div class="section" id="sec-planificacion">
+    <div class="section-header"><h2>Planificación financiera</h2></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><div class="card-title-text">Proyección de efectivo</div><span class="muted" id="proyeccion-resumen"></span></div>
+        <p class="planning-help">Los próximos 6 meses consideran tus recurrencias y cuotas de deuda; no crea movimientos automáticamente.</p>
+        <div class="chart-wrap" id="chart-proyeccion-wrap"><canvas id="chart-proyeccion"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-text">Distribución por cuenta</div></div>
+        <div class="chart-wrap" id="chart-cuentas-wrap"><canvas id="chart-cuentas"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card" id="cuentas-editor">
+        <div class="card-title"><div class="card-title-text">Cuentas y conciliación</div></div>
+        <div class="form-row"><div><label>Nombre</label><input id="cuenta-nombre" type="text" placeholder="Ej: Banco Pichincha"></div><div><label>Tipo</label><select id="cuenta-tipo"><option>Banco</option><option>Efectivo</option><option>Ahorro</option><option>Tarjeta</option><option>Otro</option></select></div></div>
+        <div class="form-row"><div><label>Saldo inicial ($)</label><input id="cuenta-saldo-inicial" type="number" step="0.01" placeholder="0.00"></div></div>
+        <button class="btn btn-primary" onclick="guardarCuenta()">Crear cuenta</button>
+        <div id="lista-cuentas" class="planning-list"></div>
+      </div>
+      <div class="card" id="metas-editor">
+        <div class="card-title"><div class="card-title-text">Metas de ahorro</div></div>
+        <div class="form-row"><div><label>Meta</label><input id="meta-titulo" type="text" placeholder="Ej: Fondo de emergencia"></div><div><label>Objetivo ($)</label><input id="meta-objetivo" type="number" min="0" step="0.01" placeholder="1000.00"></div></div>
+        <div class="form-row"><div><label>Ya ahorrado ($)</label><input id="meta-inicial" type="number" min="0" step="0.01" placeholder="0.00"></div><div><label>Fecha objetivo</label><input id="meta-fecha" type="date"></div></div>
+        <button class="btn btn-primary" onclick="guardarMeta()">Crear meta</button>
+        <div id="lista-metas" class="planning-list"></div>
+      </div>
+    </div>
+
+    <div class="card" id="recurrentes-editor">
+      <div class="card-title"><div class="card-title-text">Ingresos y gastos recurrentes</div><button class="btn btn-soft btn-sm" onclick="aplicarRecurrentesMes()">Aplicar pendientes del mes</button></div>
+      <p class="planning-help">Úsalos para sueldo, arriendo, servicios o cuotas. Aplicar pendientes registra solo los que aún no existen y nunca duplica un mes.</p>
+      <div class="form-row tri"><div><label>Tipo</label><select id="recurr-kind" onchange="renderRecurringCategory()"><option value="expense">Gasto</option><option value="income">Ingreso</option></select></div><div><label>Categoría</label><select id="recurr-cat"></select></div><div><label>Monto ($)</label><input id="recurr-monto" type="number" min="0" step="0.01" placeholder="0.00"></div></div>
+      <div class="form-row tri"><div><label>Día del mes</label><input id="recurr-dia" type="number" min="1" max="31" value="1"></div><div><label>Inicio</label><input id="recurr-inicio" type="date"></div><div><label>Fin (opcional)</label><input id="recurr-fin" type="date"></div></div>
+      <div class="form-row tri"><div><label>Descripción</label><input id="recurr-desc" type="text" placeholder="Ej: Arriendo"></div><div><label>Cuenta</label><select id="recurr-cuenta"></select></div><div><label>Método</label><select id="recurr-metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Débito</option></select></div></div>
+      <button class="btn btn-primary" onclick="guardarRecurrente()">Guardar recurrencia</button>
+      <div id="lista-recurrentes" class="planning-list"></div>
     </div>
   </div>
 

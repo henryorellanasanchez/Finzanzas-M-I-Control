@@ -14,17 +14,23 @@ function responseError(response){
 
 async function fetchSnapshot(groupId){
   return Promise.all([
-    supabase.from('expenses').select('id,fecha,categoria,subcategoria,descripcion,monto,metodo,observaciones').eq('group_id', groupId),
-    supabase.from('incomes').select('id,fecha,categoria,descripcion,monto,observaciones').eq('group_id', groupId),
+    supabase.from('expenses').select('id,fecha,categoria,subcategoria,descripcion,monto,metodo,observaciones,account_id,recurring_id').eq('group_id', groupId),
+    supabase.from('incomes').select('id,fecha,categoria,descripcion,monto,observaciones,account_id,recurring_id').eq('group_id', groupId),
     supabase.from('debts').select('id,tipo,persona,concepto,monto,cuota,fecha_inicio,observaciones').eq('group_id', groupId),
-    supabase.from('debt_payments').select('id,debt_id,monto,fecha,metodo,observaciones').eq('group_id', groupId),
+    supabase.from('debt_payments').select('id,debt_id,monto,fecha,metodo,observaciones,account_id').eq('group_id', groupId),
     supabase.from('budgets').select('id,categoria,limite').eq('group_id', groupId),
     supabase.from('record_notes').select('record_type, record_id, visibility, content').eq('group_id', groupId),
+    supabase.from('financial_accounts').select('id,name,type,opening_balance,reconciled_balance,reconciled_at').eq('group_id', groupId),
+    supabase.from('financial_goals').select('id,title,target_amount,target_date,initial_amount').eq('group_id', groupId),
+    supabase.from('goal_contributions').select('id,goal_id,amount,fecha,note').eq('group_id', groupId),
+    supabase.from('recurring_transactions').select('id,kind,category,subcategory,description,amount,method,day_of_month,start_date,end_date,active,account_id').eq('group_id', groupId),
   ]);
 }
 
 function snapshotError(responses){
-  return responses.slice(0, 5).map(responseError).find(Boolean) || '';
+  // Las notas son complementarias: una caída puntual no debe impedir leer los
+  // movimientos. Las tablas de planificación sí son parte del estado principal.
+  return responses.filter((_, index)=>index!==5).map(responseError).find(Boolean) || '';
 }
 
 export function initConnectionRecovery(){
@@ -78,7 +84,7 @@ export async function loadAllData(){
     return false;
   }
 
-  const [exp, inc, deb, pay, bud, notesResponse] = responses;
+  const [exp, inc, deb, pay, bud, notesResponse, accountsResponse, goalsResponse, contributionsResponse, recurringResponse] = responses;
   const notesQueryError = responseError(notesResponse);
   const recordNotes = notesResponse.data || [];
   const notes = {};
@@ -110,12 +116,12 @@ export async function loadAllData(){
   // Asi una falla temporal no borra lo que el usuario ya estaba viendo.
   state.DATA.gastos = (exp.data||[]).map(row=>({
     id:row.id, mes:row.fecha.slice(5,7), fecha:row.fecha, cat:row.categoria, sub:row.subcategoria||'',
-    desc:row.descripcion||'', monto:Number(row.monto), metodo:row.metodo||'', obs:row.observaciones||'',
+    desc:row.descripcion||'', monto:Number(row.monto), metodo:row.metodo||'', obs:row.observaciones||'', accountId:row.account_id||null, recurringId:row.recurring_id||null,
     privateNote:getNote('expense',row.id,'private'), publicNote:getNote('expense',row.id,'public')
   }));
   state.DATA.ingresos = (inc.data||[]).map(row=>({
     id:row.id, mes:row.fecha.slice(5,7), fecha:row.fecha, cat:row.categoria,
-    desc:row.descripcion||'', monto:Number(row.monto), obs:row.observaciones||'',
+    desc:row.descripcion||'', monto:Number(row.monto), obs:row.observaciones||'', accountId:row.account_id||null, recurringId:row.recurring_id||null,
     privateNote:getNote('income',row.id,'private'), publicNote:getNote('income',row.id,'public')
   }));
   state.DATA.deudas = (deb.data||[]).map(row=>({
@@ -124,10 +130,25 @@ export async function loadAllData(){
     privateNote:getNote('debt',row.id,'private'), publicNote:getNote('debt',row.id,'public')
   }));
   state.DATA.pagos = (pay.data||[]).map(row=>({
-    id:row.id, deudaId:row.debt_id, monto:Number(row.monto), fecha:row.fecha, metodo:row.metodo||'', obs:row.observaciones||'',
+    id:row.id, deudaId:row.debt_id, monto:Number(row.monto), fecha:row.fecha, metodo:row.metodo||'', obs:row.observaciones||'', accountId:row.account_id||null,
     privateNote:getNote('payment',row.id,'private'), publicNote:getNote('payment',row.id,'public')
   }));
   state.DATA.presupuestos = (bud.data||[]).map(row=>({ id:row.id, cat:row.categoria, limite:Number(row.limite) }));
+  state.DATA.cuentas = (accountsResponse.data||[]).map(row=>({
+    id:row.id, name:row.name, type:row.type, openingBalance:Number(row.opening_balance||0),
+    reconciledBalance:row.reconciled_balance == null ? null : Number(row.reconciled_balance), reconciledAt:row.reconciled_at||null
+  }));
+  state.DATA.metas = (goalsResponse.data||[]).map(row=>({
+    id:row.id, title:row.title, targetAmount:Number(row.target_amount), targetDate:row.target_date||null, initialAmount:Number(row.initial_amount||0)
+  }));
+  state.DATA.aportesMetas = (contributionsResponse.data||[]).map(row=>({
+    id:row.id, goalId:row.goal_id, monto:Number(row.amount), fecha:row.fecha, note:row.note||''
+  }));
+  state.DATA.recurrentes = (recurringResponse.data||[]).map(row=>({
+    id:row.id, kind:row.kind, category:row.category, subcategory:row.subcategory||'', description:row.description||'', monto:Number(row.amount),
+    method:row.method||'', dayOfMonth:Number(row.day_of_month), startDate:row.start_date, endDate:row.end_date||null,
+    active:Boolean(row.active), accountId:row.account_id||null
+  }));
 
   state.db.status = notesQueryError ? 'partial' : 'online';
   state.db.error = notesQueryError || null;

@@ -13,7 +13,7 @@ const messages = {
     themeLight: 'Claro',
     themeDark: 'Oscuro',
     summary: 'Resumen', add: 'Agregar', expenses: 'Gastos', income: 'Ingresos', debts: 'Deudas',
-    budgets: 'Presupuestos', monthly: 'Mensual', notes: 'Notas', reminders: 'Recordatorios',
+    budgets: 'Presupuestos', planning: 'Planificación', monthly: 'Mensual', notes: 'Notas', reminders: 'Recordatorios',
     balanceEyebrow: 'Nuestro dinero, en equilibrio', planTogether: 'Planifiquen juntos.', moveTogether: 'Avancen juntos.',
     welcomeText: 'Un espacio claro para cuidar cada ingreso, gasto y meta.',
     expensesByCategory: 'Gastos por categoría', incomeVsExpenses: 'Ingresos vs gastos', historical: 'Histórico',
@@ -33,7 +33,7 @@ const messages = {
   },
   en: {
     language: 'Language', spanish: 'Spanish', english: 'English', theme: 'Theme', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark',
-    summary: 'Overview', add: 'Add', expenses: 'Expenses', income: 'Income', debts: 'Debts', budgets: 'Budgets', monthly: 'Monthly', notes: 'Notes', reminders: 'Reminders',
+    summary: 'Overview', add: 'Add', expenses: 'Expenses', income: 'Income', debts: 'Debts', budgets: 'Budgets', planning: 'Planning', monthly: 'Monthly', notes: 'Notes', reminders: 'Reminders',
     balanceEyebrow: 'Our money, in balance', planTogether: 'Plan together.', moveTogether: 'Move forward together.',
     welcomeText: 'A clear space to care for every income, expense, and goal.',
     expensesByCategory: 'Expenses by category', incomeVsExpenses: 'Income vs expenses', historical: 'History', activeDebts: 'Active debts', recentMovements: 'Recent movements', seeAll: 'See all →',
