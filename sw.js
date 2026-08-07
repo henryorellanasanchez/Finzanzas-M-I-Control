@@ -19,7 +19,7 @@
    para que los usuarios reciban la versión nueva en vez de la cacheada.
    ==================================================================== */
 
-const CACHE_NAME = 'finanzas-shell-v8';
+const CACHE_NAME = 'finanzas-shell-v9';
 
 const PRECACHE_URLS = [
   './',
@@ -98,15 +98,12 @@ self.addEventListener('fetch', (event) => {
   // instante, y en paralelo actualiza la caché desde la red para la
   // próxima vez (stale-while-revalidate).
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req).then((res) => {
+    fetch(req).then((res) => {
         if (res && res.ok) {
           const copy = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
         }
         return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
+    }).catch(() => caches.match(req))
   );
 });

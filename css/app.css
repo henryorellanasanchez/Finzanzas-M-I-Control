@@ -173,6 +173,7 @@ button, a, .tab, .type-btn, .icon-btn, input[type=checkbox]{
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .form-row.full{grid-template-columns:1fr}
 .form-row.tri{grid-template-columns:1fr 1fr 1fr}
+.form-row>div{min-width:0}
 label{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:5px;font-weight:500}
 input,select,textarea{
   width:100%;padding:9px 11px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);
@@ -276,6 +277,7 @@ input[type=number],input[type=date],input[type=time]{font-family:var(--font-mono
   /* iPhone SE / mini: dos columnas de formulario quedan muy justas */
   .form-row, .form-row.tri{grid-template-columns:1fr}
 }
+@media (min-width:401px) and (max-width:760px){.form-row.tri{grid-template-columns:1fr 1fr}}
 
 .search-box{position:relative}
 .search-box input{padding-left:30px}

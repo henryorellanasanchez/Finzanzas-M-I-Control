@@ -27,7 +27,7 @@ test('configuración de despliegue y Service Worker están sincronizados', () =>
   const vercel = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8'));
   assert.ok(vercel.rewrites.some(item => item.source === '/share/:token'));
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(sw, /finanzas-shell-v8/);
+  assert.match(sw, /finanzas-shell-v9/);
   assert.match(sw, /\.\/js\/finance\.js/);
   assert.match(sw, /\.\/js\/modules\/planificacion\.js/);
   assert.match(sw, /\.\/js\/googleCalendar\.js/);
@@ -36,6 +36,7 @@ test('configuración de despliegue y Service Worker están sincronizados', () =>
   assert.match(index, /id="connection-banner"/);
   assert.match(index, /id="i-mes" onchange="aplicarMesSeleccionado\('i'\)"/);
   assert.match(index, /id="g-mes" onchange="aplicarMesSeleccionado\('g'\)"/);
+  assert.match(index, /id="i-mes"[^>]*>.*<option value="12">Diciembre<\/option>/);
   assert.match(index, /id="i-obs"/);
 });
 
