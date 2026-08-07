@@ -62,6 +62,8 @@ export function applyRoleUI(){
   if(fab) fab.style.display = isOwner ? '' : 'none';
   const btnShare = document.getElementById('btn-share');
   if(btnShare) btnShare.style.display = isOwner ? '' : 'none';
+  const btnCategories = document.getElementById('btn-categories');
+  if(btnCategories) btnCategories.style.display = isOwner ? '' : 'none';
   allModules().filter(m=>m.ownerOnly).forEach(m=>{
     const tabEl = document.querySelector(`.tab[data-tab="${m.id}"]`);
     if(tabEl) tabEl.style.display = isOwner ? '' : 'none';

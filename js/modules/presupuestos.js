@@ -6,10 +6,11 @@
 import { supabase } from '../config.js';
 import { state } from '../state.js';
 import { fmt, esc, mesActualYM, anioReal, toast } from '../utils.js';
-import { CATS_GASTO, MESES } from '../constants.js';
+import { MESES } from '../constants.js';
 import { requireOwner } from '../auth.js';
 import { loadAllData } from '../dataLayer.js';
 import { registerModule } from '../registry.js';
+import { getCategories } from '../categories.js';
 
 function gastoCategoriaMesActual(cat){
   const ym = mesActualYM();
@@ -38,7 +39,7 @@ export async function eliminarPresupuesto(id){
 
 export function renderPresupuestos(){
   document.getElementById('presu-mes-label').textContent = MESES[new Date().getMonth()] + ' ' + anioReal();
-  document.getElementById('b-cat').innerHTML = Object.keys(CATS_GASTO).map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('b-cat').innerHTML = Object.keys(getCategories()).map(c=>`<option>${c}</option>`).join('');
 
   const defCard = document.getElementById('b-cat').closest('.card');
   if(defCard) defCard.style.display = state.currentRole==='owner' ? '' : 'none';

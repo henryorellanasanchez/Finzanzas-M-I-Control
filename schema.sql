@@ -156,6 +156,20 @@ create table if not exists public.budgets (
   unique (group_id, categoria)
 );
 
+-- Categorías personalizadas por espacio personal. Las categorías base viven
+-- en el frontend; aquí solo se guardan las que el usuario agregue o ajuste.
+create table if not exists public.finance_categories (
+  id             uuid primary key default gen_random_uuid(),
+  group_id       uuid not null references public.finance_groups(id) on delete cascade,
+  name           text not null,
+  subcategories  jsonb not null default '[]'::jsonb,
+  color          text,
+  created_by     uuid not null references public.profiles(id),
+  created_at     timestamptz not null default now(),
+  unique (group_id, name)
+);
+create index if not exists finance_categories_group_idx on public.finance_categories (group_id, name);
+
 -- ============================================================================
 -- TRIGGER: actualizar updated_at automáticamente
 -- ============================================================================
@@ -340,6 +354,7 @@ alter table public.debts           enable row level security;
 alter table public.debt_payments   enable row level security;
 alter table public.budgets         enable row level security;
 alter table public.share_link_views enable row level security;
+alter table public.finance_categories enable row level security;
 
 -- ---------- profiles ----------
 drop policy if exists "select own or co-member profile" on public.profiles;
@@ -482,6 +497,22 @@ create policy "owner or viewer reads share views" on public.share_link_views
       where i.id = invitation_id and fg.owner_id = auth.uid()
     )
   );
+
+drop policy if exists "members read categories" on public.finance_categories;
+create policy "members read categories" on public.finance_categories
+  for select using (public.is_group_owner(group_id) or public.is_shared_viewer(group_id));
+
+drop policy if exists "owner creates categories" on public.finance_categories;
+create policy "owner creates categories" on public.finance_categories
+  for insert with check (public.is_group_owner(group_id) and created_by = auth.uid());
+
+drop policy if exists "owner updates categories" on public.finance_categories;
+create policy "owner updates categories" on public.finance_categories
+  for update using (public.is_group_owner(group_id));
+
+drop policy if exists "owner deletes categories" on public.finance_categories;
+create policy "owner deletes categories" on public.finance_categories
+  for delete using (public.is_group_owner(group_id));
 
 -- ---------- expenses / incomes / debts / debt_payments / budgets ----------
 -- Mismo patrón para las 5 tablas transaccionales: cualquier miembro puede

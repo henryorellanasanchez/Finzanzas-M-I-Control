@@ -7,6 +7,8 @@
 
 export const state = {
   DATA: { gastos: [], ingresos: [], deudas: [], pagos: [], presupuestos: [] },
+  categories: {},
+  customCategories: [],
   session: null,
   myProfile: null,
   myGroups: [],        // [{id, name, role}]

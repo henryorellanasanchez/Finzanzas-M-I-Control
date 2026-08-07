@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { esc, toast, openModal } from './utils.js';
 import { applyRoleUI } from './ui.js';
 import { loadAllData } from './dataLayer.js';
+import { loadCategories } from './categories.js';
 
 /* ---------- token de invitación en la URL ---------- */
 export function getInviteTokenFromURL(){
@@ -180,6 +181,7 @@ export async function setActiveGroup(groupId){
   state.currentRole = (state.myGroups.find(g=>g.id===groupId)||{}).role || 'viewer';
   renderGroupSwitcher();
   applyRoleUI();
+  await loadCategories();
   await loadAllData();
 }
 

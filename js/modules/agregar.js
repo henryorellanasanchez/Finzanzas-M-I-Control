@@ -10,6 +10,7 @@ import { CATS_GASTO, MESES, MESES_KEYS } from '../constants.js';
 import { requireOwner } from '../auth.js';
 import { loadAllData } from '../dataLayer.js';
 import { registerModule } from '../registry.js';
+import { getCategories } from '../categories.js';
 
 export function setTipo(t){
   state.tipoActivo = t;
@@ -36,7 +37,8 @@ function ensureNoteFields(){
 }
 
 export function initGastoForm(isVest){
-  const cats = isVest ? {'Vestimenta': CATS_GASTO['Vestimenta']} : CATS_GASTO;
+  const allCats = getCategories();
+  const cats = isVest ? {'Vestimenta': allCats['Vestimenta'] || CATS_GASTO['Vestimenta']} : allCats;
   const catSel = document.getElementById('g-cat');
   catSel.innerHTML = Object.keys(cats).map(c=>`<option>${c}</option>`).join('');
   if(isVest) catSel.value = 'Vestimenta';
@@ -46,7 +48,7 @@ export function initGastoForm(isVest){
 }
 
 export function updateSubcat(cats){
-  const c = cats || CATS_GASTO;
+  const c = cats || getCategories();
   const cat = document.getElementById('g-cat').value;
   const subs = c[cat] || ['Otros'];
   document.getElementById('g-subcat').innerHTML = subs.map(s=>`<option>${s}</option>`).join('');
