@@ -54,7 +54,7 @@ export function showAuthScreen(mode, extra){
         <button class="btn btn-soft btn-block" onclick="location.href=location.origin+location.pathname.replace(/\\/share\\/.+$/,'')">Volver al inicio</button>
       </div>`;
   }
-  
+
   if(mode==='error' && window._lastAuthErrorCode){
     const diagnosticEl = gate.querySelector('.auth-msg');
     if(diagnosticEl) diagnosticEl.textContent += ` Código técnico: ${window._lastAuthErrorCode}.`;
