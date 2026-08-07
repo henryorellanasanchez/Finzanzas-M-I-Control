@@ -19,7 +19,7 @@
    para que los usuarios reciban la versión nueva en vez de la cacheada.
    ==================================================================== */
 
-const CACHE_NAME = 'finanzas-shell-v6';
+const CACHE_NAME = 'finanzas-shell-v7';
 
 const PRECACHE_URLS = [
   './',
@@ -31,6 +31,7 @@ const PRECACHE_URLS = [
   './js/config.js',
   './js/constants.js',
   './js/dataLayer.js',
+  './js/finance.js',
   './js/googleCalendar.js',
   './js/i18n.js',
   './js/registry.js',

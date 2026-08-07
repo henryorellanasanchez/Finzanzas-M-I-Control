@@ -24,6 +24,7 @@ export function renderIngresos(){
       <div class="list-item-left">
         <div class="list-item-name">${esc(i.desc)}</div>
         <div class="list-item-meta">${i.fecha} · <span class="badge badge-green">${esc(i.cat)}</span></div>
+        ${i.obs ? `<div class="list-item-meta">${esc(i.obs)}</div>` : ''}
       </div>
       ${noteHtml(i)}
       <div style="display:flex;align-items:center;gap:8px">

@@ -6,11 +6,38 @@
 import { supabase } from '../config.js';
 import { state } from '../state.js';
 import { esc, fmt, toast, getSaldoDeuda, fechaLocalISO, fechaISOValida } from '../utils.js';
+import { positiveAmount } from '../finance.js';
 import { CATS_GASTO, MESES, MESES_KEYS } from '../constants.js';
 import { requireOwner } from '../auth.js';
 import { loadAllData } from '../dataLayer.js';
 import { registerModule } from '../registry.js';
 import { getCategories } from '../categories.js';
+
+const savingForms = new Set();
+
+function beginSave(formId){
+  if(savingForms.has(formId)){
+    toast('Este registro ya se está guardando','err');
+    return false;
+  }
+  savingForms.add(formId);
+  const button = document.querySelector(`#${formId} button`);
+  if(button) button.disabled = true;
+  return true;
+}
+
+function endSave(formId){
+  savingForms.delete(formId);
+  const button = document.querySelector(`#${formId} button`);
+  if(button) button.disabled = false;
+}
+
+async function refreshAfterWrite(successMessage){
+  let synced = false;
+  try { synced = await loadAllData(); }
+  catch(error){ console.error('Error actualizando datos después de guardar:', error); }
+  toast(synced ? successMessage : `${successMessage} La sincronización se reintentará al recuperar la conexión.`, synced ? undefined : 'err');
+}
 
 export function setTipo(t){
   state.tipoActivo = t;
@@ -18,7 +45,11 @@ export function setTipo(t){
   document.querySelectorAll('#tipo-selector .type-btn').forEach(b=>b.classList.toggle('active', b.dataset.tipo===t));
   ['form-gasto','form-ingreso','form-deuda','form-pago'].forEach(f=>document.getElementById(f).style.display='none');
   if(t==='gasto'||t==='vest'){ document.getElementById('form-gasto').style.display='block'; initGastoForm(t==='vest'); }
-  if(t==='ingreso'){ document.getElementById('form-ingreso').style.display='block'; }
+  if(t==='ingreso'){
+    document.getElementById('form-ingreso').style.display='block';
+    const fecha = document.getElementById('i-fecha');
+    if(!fecha.value) fecha.value = fechaLocalISO();
+  }
   if(t==='deuda'){ document.getElementById('form-deuda').style.display='block'; }
   if(t==='pago'){ document.getElementById('form-pago').style.display='block'; populatePagoDeuda(); }
 }
@@ -67,8 +98,10 @@ async function saveRecordNotes(recordType, recordId, privateId, publicId){
     group_id:state.activeGroupId, owner_id:state.session.user.id
   }));
   if(rows.length){
-    const { error } = await supabase.from('record_notes').insert(rows);
-    if(error){ console.error(error); toast('El registro se guardó, pero no sus notas','err'); }
+    try{
+      const { error } = await supabase.from('record_notes').insert(rows);
+      if(error) throw error;
+    } catch(error){ console.error(error); toast('El registro se guardó, pero no sus notas','err'); }
   }
 }
 
@@ -76,19 +109,23 @@ function clearNoteFields(...ids){ ids.forEach(id=>{ const el=document.getElement
 
 export function populatePagoDeuda(){
   const sel = document.getElementById('p-deuda');
-  sel.innerHTML = state.DATA.deudas.map(d=>{
+  const pendientes = state.DATA.deudas.filter(d=>getSaldoDeuda(d) > 0);
+  sel.innerHTML = pendientes.map(d=>{
     const saldo = getSaldoDeuda(d);
     return `<option value="${d.id}">${esc(d.persona)} — ${esc(d.concepto)} (saldo: ${fmt(saldo)})</option>`;
   }).join('');
+  if(!pendientes.length) sel.innerHTML = '<option value="">No hay deudas pendientes</option>';
   document.getElementById('p-fecha').value = fechaLocalISO();
 }
 
 export async function guardarGasto(){
   if(!requireOwner()) return;
-  const monto = parseFloat(document.getElementById('g-monto').value)||0;
+  const monto = positiveAmount(document.getElementById('g-monto').value);
   if(!monto){ toast('Ingresa un monto válido','err'); return; }
   const fecha = document.getElementById('g-fecha').value;
   if(!fechaISOValida(fecha)){ toast('Ingresa una fecha valida','err'); return; }
+  if(!beginSave('form-gasto')) return;
+  try{
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id,
     fecha,
@@ -105,44 +142,60 @@ export async function guardarGasto(){
   document.getElementById('g-obs').value='';
   await saveRecordNotes('expense', created.id, 'g-note-private', 'g-note-public');
   clearNoteFields('g-note-private','g-note-public');
-  await loadAllData();
-  toast('Gasto guardado ✓');
+  await refreshAfterWrite('Gasto guardado ✓');
+  } catch(error) {
+    console.error(error);
+    toast('No se pudo guardar el gasto','err');
+  } finally { endSave('form-gasto'); }
 }
 
 export async function guardarIngreso(){
   if(!requireOwner()) return;
-  const monto = parseFloat(document.getElementById('i-monto').value)||0;
+  const monto = positiveAmount(document.getElementById('i-monto').value);
   if(!monto){ toast('Ingresa un monto válido','err'); return; }
   const fecha = document.getElementById('i-fecha').value;
   if(!fechaISOValida(fecha)){ toast('Ingresa una fecha valida','err'); return; }
+  if(!beginSave('form-ingreso')) return;
+  try{
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id,
     fecha,
     categoria: document.getElementById('i-cat').value,
     descripcion: document.getElementById('i-desc').value || 'Ingreso',
-    monto, observaciones: ''
+    monto, observaciones: document.getElementById('i-obs').value.trim()
   };
   const { data: created, error } = await supabase.from('incomes').insert(payload).select('id').single();
   if(error){ toast('No se pudo guardar el ingreso','err'); console.error(error); return; }
   document.getElementById('i-monto').value='';
   document.getElementById('i-desc').value='';
+  document.getElementById('i-obs').value='';
   await saveRecordNotes('income', created.id, 'i-note-private', 'i-note-public');
   clearNoteFields('i-note-private','i-note-public');
-  await loadAllData();
-  toast('Ingreso guardado ✓');
+  await refreshAfterWrite('Ingreso guardado ✓');
+  } catch(error) {
+    console.error(error);
+    toast('No se pudo guardar el ingreso','err');
+  } finally { endSave('form-ingreso'); }
 }
 
 export async function guardarDeuda(){
   if(!requireOwner()) return;
   const persona = document.getElementById('d-persona').value.trim();
-  const monto = parseFloat(document.getElementById('d-monto').value)||0;
+  const monto = positiveAmount(document.getElementById('d-monto').value);
+  const cuotaValue = document.getElementById('d-cuota').value;
+  const cuota = cuotaValue === '' ? 0 : positiveAmount(cuotaValue);
+  const fechaInicio = document.getElementById('d-inicio').value || fechaLocalISO();
   if(!persona||!monto){ toast('Completa persona y monto','err'); return; }
+  if(cuotaValue !== '' && !cuota){ toast('La cuota debe ser un monto positivo','err'); return; }
+  if(!fechaISOValida(fechaInicio)){ toast('Ingresa una fecha valida','err'); return; }
+  if(!beginSave('form-deuda')) return;
+  try{
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id,
     tipo: document.getElementById('d-tipo').value, persona,
     concepto: document.getElementById('d-concepto').value || 'Deuda',
-    monto, cuota: parseFloat(document.getElementById('d-cuota').value)||0,
-    fecha_inicio: document.getElementById('d-inicio').value || fechaLocalISO(),
+    monto, cuota,
+    fecha_inicio: fechaInicio,
     observaciones: document.getElementById('d-obs').value
   };
   const { data: created, error } = await supabase.from('debts').insert(payload).select('id').single();
@@ -150,20 +203,26 @@ export async function guardarDeuda(){
   ['d-persona','d-concepto','d-monto','d-cuota','d-obs'].forEach(id=>document.getElementById(id).value='');
   await saveRecordNotes('debt', created.id, 'd-note-private', 'd-note-public');
   clearNoteFields('d-note-private','d-note-public');
-  await loadAllData();
-  toast('Deuda creada ✓');
+  await refreshAfterWrite('Deuda creada ✓');
+  } catch(error) {
+    console.error(error);
+    toast('No se pudo crear la deuda','err');
+  } finally { endSave('form-deuda'); }
 }
 
 export async function guardarPago(){
   if(!requireOwner()) return;
   const deudaId = document.getElementById('p-deuda').value;
-  const monto = parseFloat(document.getElementById('p-monto').value)||0;
+  const monto = positiveAmount(document.getElementById('p-monto').value);
   if(!monto){ toast('Ingresa un monto válido','err'); return; }
   const deuda = state.DATA.deudas.find(d=>d.id===deudaId);
   const saldoActual = deuda ? getSaldoDeuda(deuda) : 0;
   const fecha = document.getElementById('p-fecha').value;
   if(!deuda){ toast('Selecciona una deuda valida','err'); return; }
   if(!fechaISOValida(fecha)){ toast('Ingresa una fecha valida','err'); return; }
+  if(monto > saldoActual){ toast(`El pago no puede superar el saldo pendiente (${fmt(saldoActual)})`,'err'); return; }
+  if(!beginSave('form-pago')) return;
+  try{
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id, debt_id: deudaId, monto,
     fecha,
@@ -174,9 +233,14 @@ export async function guardarPago(){
   document.getElementById('p-monto').value='';
   await saveRecordNotes('payment', created.id, 'p-note-private', 'p-note-public');
   clearNoteFields('p-note-private','p-note-public');
-  await loadAllData();
+  const synced = await loadAllData();
+  if(!synced){ toast('Pago registrado. La sincronización se reintentará al recuperar la conexión.','err'); return; }
   if(deuda && monto>=saldoActual){ toast(`¡Deuda con ${deuda.persona} saldada! 🎉`); }
   else { toast('Pago registrado — saldo actualizado ✓'); }
+  } catch(error) {
+    console.error(error);
+    toast('No se pudo registrar el pago','err');
+  } finally { endSave('form-pago'); }
 }
 
 registerModule({ id: 'agregar', ownerOnly: true, render: null });

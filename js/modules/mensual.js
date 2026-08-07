@@ -3,6 +3,7 @@
    ==================================================================== */
 import { state } from '../state.js';
 import { fmt, anioReal, chartColors } from '../utils.js';
+import { monthlyTotals } from '../finance.js';
 import { MESES, MESES_KEYS } from '../constants.js';
 import { registerModule } from '../registry.js';
 
@@ -11,21 +12,22 @@ export function renderMensual(){
   document.getElementById('mensual-anio-label').textContent = anio;
   const tbody = document.getElementById('tabla-mensual');
   let acum = 0;
-  const ingPorMes = [], gasPorMes = [];
+  const ingPorMes = [], gasPorMes = [], pagosPorMes = [], cobrosPorMes = [];
   tbody.innerHTML = MESES.map((m,i)=>{
     const k = MESES_KEYS[i];
-    const ing = state.DATA.ingresos.filter(x=>x.fecha.startsWith(anio+'-'+k)).reduce((a,x)=>a+x.monto,0);
-    const gas = state.DATA.gastos.filter(x=>x.fecha.startsWith(anio+'-'+k)).reduce((a,x)=>a+x.monto,0);
-    const deudaPagos = state.DATA.pagos.filter(p=>p.fecha.startsWith(anio+'-'+k)).reduce((a,p)=>a+p.monto,0);
-    const saldo = ing-gas;
+    const { ing, gas, pagosDeuda: deudaPagos, cobrosDeuda, saldo } = monthlyTotals(state.DATA, anio+'-'+k);
     acum += saldo;
-    ingPorMes.push(ing); gasPorMes.push(gas);
-    if(ing===0&&gas===0) return `<tr><td style="color:var(--ink-faint)">${m}</td><td colspan="5" style="color:var(--ink-faint);text-align:center;font-size:11px">—</td></tr>`;
+    ingPorMes.push(ing); gasPorMes.push(gas); pagosPorMes.push(deudaPagos); cobrosPorMes.push(cobrosDeuda);
+    if(ing===0&&gas===0&&deudaPagos===0&&cobrosDeuda===0) return `<tr><td style="color:var(--ink-faint)">${m}</td><td colspan="5" style="color:var(--ink-faint);text-align:center;font-size:11px">—</td></tr>`;
+    const deudaTexto = [
+      deudaPagos ? `−${fmt(deudaPagos)}` : '',
+      cobrosDeuda ? `+${fmt(cobrosDeuda)}` : ''
+    ].filter(Boolean).join(' · ') || '—';
     return `<tr>
       <td>${m}</td>
       <td style="text-align:right;color:var(--olive)">${fmt(ing)}</td>
       <td style="text-align:right;color:var(--terracota)">${fmt(gas)}</td>
-      <td style="text-align:right;color:var(--azul)">${deudaPagos?fmt(deudaPagos):'—'}</td>
+      <td style="text-align:right;color:${cobrosDeuda&&!deudaPagos?'var(--olive)':'var(--azul)'}">${deudaTexto}</td>
       <td style="text-align:right;font-weight:600;color:${saldo>=0?'var(--olive)':'var(--terracota)'}">${fmt(saldo)}</td>
       <td style="text-align:right;color:${acum>=0?'var(--olive)':'var(--terracota)'}">${fmt(acum)}</td>
     </tr>`;
@@ -40,7 +42,9 @@ export function renderMensual(){
       labels: MESES.map(m=>m.slice(0,3)),
       datasets:[
         {label:'Ingresos', data:ingPorMes, backgroundColor:'#5C7A52', borderRadius:4},
-        {label:'Gastos', data:gasPorMes, backgroundColor:'#C1603F', borderRadius:4}
+        {label:'Gastos', data:gasPorMes, backgroundColor:'#C1603F', borderRadius:4},
+        {label:'Pagos de deuda', data:pagosPorMes, backgroundColor:'#49758C', borderRadius:4},
+        {label:'Cobros de deuda', data:cobrosPorMes, backgroundColor:'#B58736', borderRadius:4}
       ]
     },
     options:{

@@ -1,6 +1,7 @@
 /* Exportacion e importacion CSV del grupo activo. */
 import { state } from '../state.js';
-import { openModal, closeModal, toast } from '../utils.js';
+import { openModal, closeModal, toast, fechaISOValida } from '../utils.js';
+import { positiveAmount } from '../finance.js';
 import { supabase } from '../config.js';
 import { loadAllData } from '../dataLayer.js';
 import { requireOwner } from '../auth.js';
@@ -89,7 +90,7 @@ function numberValue(value){
 
 function dateValue(value){
   const date=String(value||'').trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
+  return fechaISOValida(date) ? date : '';
 }
 
 export async function importCSVFromInput(){
@@ -108,18 +109,24 @@ export async function importCSVFile(file){
     let inserted=0, skipped=0;
     if(isPayment){
       const payments=[];
+      const remaining = new Map(state.DATA.deudas.map(d=>[
+        d.id,
+        Math.max(0, Number(d.monto) - state.DATA.pagos.filter(p=>p.deudaId===d.id).reduce((sum,p)=>sum+(Number(p.monto)||0),0))
+      ]));
       for(const r of records){
-        const date=dateValue(r.fecha), amount=numberValue(r.monto);
+        const date=dateValue(r.fecha), amount=positiveAmount(numberValue(r.monto));
         const debtText=String(r.deuda||'').trim();
         const debt=state.DATA.deudas.find(d=>`${d.persona} - ${d.concepto}`===debtText) || state.DATA.deudas.find(d=>debtText.includes(d.persona));
-        if(!date || !amount || !debt){ skipped++; continue; }
+        const saldo = debt ? remaining.get(debt.id) || 0 : 0;
+        if(!date || !amount || !debt || amount > saldo){ skipped++; continue; }
         payments.push({group_id:state.activeGroupId,created_by:state.session.user.id,debt_id:debt.id,fecha:date,monto:amount,metodo:r.metodo||'Efectivo',observaciones:r.observaciones||''});
+        remaining.set(debt.id, saldo - amount);
       }
       if(payments.length){ const {error}=await supabase.from('debt_payments').insert(payments); if(error) throw error; inserted=payments.length; }
     } else if(isExpense){
       const expenses=[];
       for(const r of records){
-        const date=dateValue(r.fecha), amount=numberValue(r.monto);
+        const date=dateValue(r.fecha), amount=positiveAmount(numberValue(r.monto));
         if(!date || !amount || !r.categoria){ skipped++; continue; }
         expenses.push({group_id:state.activeGroupId,created_by:state.session.user.id,fecha:date,categoria:r.categoria,subcategoria:r.subcategoria||'',descripcion:r.descripcion||r.subcategoria||r.categoria,monto:amount,metodo:r.metodo||'Efectivo',observaciones:r.observaciones||''});
       }
@@ -127,7 +134,7 @@ export async function importCSVFile(file){
     } else {
       const incomes=[];
       for(const r of records){
-        const date=dateValue(r.fecha), amount=numberValue(r.monto);
+        const date=dateValue(r.fecha), amount=positiveAmount(numberValue(r.monto));
         if(!date || !amount || !r.categoria){ skipped++; continue; }
         incomes.push({group_id:state.activeGroupId,created_by:state.session.user.id,fecha:date,categoria:r.categoria,descripcion:r.descripcion||r.categoria,monto:amount,observaciones:r.observaciones||''});
       }
