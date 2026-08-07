@@ -46,6 +46,7 @@ export function showAuthScreen(mode, extra){
         <button class="btn btn-primary btn-block" onclick="saveProfileAndContinue()">Continuar</button>
       </div>`;
   } else if(mode==='error'){
+    const diagnostic = window._lastAuthErrorCode ? ` Código técnico: ${esc(window._lastAuthErrorCode)}.` : '';
     gate.innerHTML = `
       <div class="auth-card">
         <div class="auth-title">Algo salió mal</div>
@@ -53,10 +54,21 @@ export function showAuthScreen(mode, extra){
         <button class="btn btn-soft btn-block" onclick="location.href=location.origin+location.pathname.replace(/\\/share\\/.+$/,'')">Volver al inicio</button>
       </div>`;
   }
-}
+  
+  if(mode==='error' && window._lastAuthErrorCode){
+    const diagnosticEl = gate.querySelector('.auth-msg');
+    if(diagnosticEl) diagnosticEl.textContent += ` Código técnico: ${window._lastAuthErrorCode}.`;
+  }
+  }
+
 export function hideAuthScreen(){
   document.getElementById('auth-gate').style.display = 'none';
   document.getElementById('app-root').style.display = 'block';
+}
+
+export async function retryAuth(){
+  showAuthScreen('loading');
+  await handleAuthReady();
 }
 
 /* ---------- login / logout ---------- */
@@ -124,7 +136,7 @@ async function loadMyGroups(){
     .from('group_members')
     .select('role, group_id, finance_groups(id, name, owner_id)')
     .eq('user_id', state.session.user.id);
-  if(error){ console.error(error); return []; }
+  if(error){ console.error('loadMyGroups error:', error); throw error; }
   return (data||[])
     .filter(r=>r.finance_groups)
     .map(r=>({
@@ -177,6 +189,7 @@ export async function afterProfileReady(){
     hideAuthScreen();
   }catch(e){
     console.error(e);
+    window._lastAuthErrorCode = e?.code || e?.status || e?.cause?.code || 'CONNECTION_OR_RLS';
     showAuthScreen('error', 'No se pudieron cargar tus grupos de finanzas. Intenta recargar la página.');
   }
 }

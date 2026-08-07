@@ -39,7 +39,7 @@ import { getCategories, openCategoryManager, saveCustomCategory, deleteCustomCat
 import { initConnectionRecovery } from './dataLayer.js';
 import {
   initAuth, loginWithGoogle, logout, saveProfileAndContinue,
-  onGroupSwitch, openAccountModal
+  onGroupSwitch, openAccountModal, retryAuth
 } from './auth.js';
 
 // --- módulos de pestaña (se autoregistran al importarse) ---
@@ -76,7 +76,7 @@ Object.assign(window, {
   showTab, toggleTheme, changeThemeMode, changeLanguage,
   openCategoryManager, saveCustomCategory, deleteCustomCategory,
   // auth
-  loginWithGoogle, logout, saveProfileAndContinue, onGroupSwitch, openAccountModal,
+  loginWithGoogle, logout, saveProfileAndContinue, onGroupSwitch, openAccountModal, retryAuth,
   // modal genérico
   closeModal,
   // gastos / ingresos
