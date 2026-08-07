@@ -10,7 +10,9 @@ export const SUPABASE_URL = 'https://zflayxdhxmquuchrbrff.supabase.co';
 // Project Settings → API → Project API keys → "anon public"
 // Esta clave es pública por diseño; la seguridad real la da el Row
 // Level Security definido en schema.sql, no el secreto de esta clave.
-export const SUPABASE_ANON_KEY = 'PEGA_AQUI_TU_SUPABASE_ANON_KEY';
+export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_RptaTrZcB_2aUf_xSkz4fA_b6GAlOCA';
+// Alias de compatibilidad con el resto de la app.
+export const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
 
 // `supabase` llega como variable global porque el SDK se carga vía
 // <script src="..."> (UMD) en index.html, antes de este módulo.
