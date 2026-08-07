@@ -64,7 +64,7 @@ import { renderGastos } from './modules/gastos.js';
 import { renderIngresos } from './modules/ingresos.js';
 import { renderMensual } from './modules/mensual.js';
 import { renderPlanificacion, guardarCuenta, conciliarCuenta, eliminarCuenta, guardarMeta, aportarMeta, eliminarMeta, guardarRecurrente, toggleRecurrente, eliminarRecurrente, aplicarRecurrentesMes, renderRecurringCategory } from './modules/planificacion.js';
-import { setTipo, updateSubcat, guardarGasto, guardarIngreso, guardarDeuda, guardarPago } from './modules/agregar.js';
+import { setTipo, updateSubcat, guardarGasto, guardarIngreso, guardarDeuda, guardarPago, sincronizarMesConFecha, aplicarMesSeleccionado } from './modules/agregar.js';
 import { guardarPresupuesto, eliminarPresupuesto } from './modules/presupuestos.js';
 import { guardarNota, eliminarNota } from './modules/notas.js';
 import {
@@ -84,7 +84,7 @@ Object.assign(window, {
   // gastos / ingresos
   renderGastos, renderIngresos, confirmDelete, doDelete,
   // agregar
-  setTipo, updateSubcat, guardarGasto, guardarIngreso, guardarDeuda, guardarPago,
+  setTipo, updateSubcat, guardarGasto, guardarIngreso, guardarDeuda, guardarPago, sincronizarMesConFecha, aplicarMesSeleccionado,
   // presupuestos
   guardarPresupuesto, eliminarPresupuesto,
   // mensual
@@ -116,6 +116,7 @@ function initStaticUI(){
   const today = fechaLocalISO();
   document.getElementById('g-fecha').value = today;
   document.getElementById('i-fecha').value = today;
+  ['g-fecha','i-fecha'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>sincronizarMesConFecha(id[0])));
   document.getElementById('rec-fecha').value = today;
   document.getElementById('recurr-inicio').value = today;
 

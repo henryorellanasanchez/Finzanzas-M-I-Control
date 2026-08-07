@@ -134,7 +134,8 @@
 
       <!-- GASTO / VESTIMENTA -->
       <div id="form-gasto" style="display:none">
-        <div class="form-row">
+        <div class="form-row tri">
+          <div><label>Mes</label><select id="g-mes" onchange="aplicarMesSeleccionado('g')"></select></div>
           <div><label>Fecha</label><input type="date" id="g-fecha"></div>
           <div><label>Cuenta</label><select id="g-cuenta"></select></div>
         </div>
@@ -159,7 +160,8 @@
 
       <!-- INGRESO -->
       <div id="form-ingreso" style="display:none">
-        <div class="form-row">
+        <div class="form-row tri">
+          <div><label>Mes</label><select id="i-mes" onchange="aplicarMesSeleccionado('i')"></select></div>
           <div><label>Fecha</label><input type="date" id="i-fecha"></div>
           <div><label>Categoría</label><select id="i-cat"><option>Trabajo</option><option>Extra</option><option>Freelance</option><option>Negocio</option><option>Otros</option></select></div>
         </div>

@@ -34,7 +34,8 @@ test('configuración de despliegue y Service Worker están sincronizados', () =>
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(index, /mi-control\.png\?v=5/);
   assert.match(index, /id="connection-banner"/);
-  assert.doesNotMatch(index, /id="i-mes"/);
+  assert.match(index, /id="i-mes" onchange="aplicarMesSeleccionado\('i'\)"/);
+  assert.match(index, /id="g-mes" onchange="aplicarMesSeleccionado\('g'\)"/);
   assert.match(index, /id="i-obs"/);
 });
 

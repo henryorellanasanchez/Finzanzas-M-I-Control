@@ -7,7 +7,7 @@ import { supabase } from '../config.js';
 import { state } from '../state.js';
 import { esc, fmt, toast, getSaldoDeuda, fechaLocalISO, fechaISOValida } from '../utils.js';
 import { positiveAmount } from '../finance.js';
-import { CATS_GASTO } from '../constants.js';
+import { CATS_GASTO, MESES, MESES_KEYS } from '../constants.js';
 import { requireOwner } from '../auth.js';
 import { loadAllData } from '../dataLayer.js';
 import { registerModule } from '../registry.js';
@@ -49,6 +49,8 @@ export function setTipo(t){
     document.getElementById('form-ingreso').style.display='block';
     const fecha = document.getElementById('i-fecha');
     if(!fecha.value) fecha.value = fechaLocalISO();
+    populateMes('i-mes');
+    sincronizarMesConFecha('i');
     populateAccountSelects();
   }
   if(t==='deuda'){ document.getElementById('form-deuda').style.display='block'; }
@@ -76,7 +78,10 @@ export function initGastoForm(isVest){
   if(isVest) catSel.value = 'Vestimenta';
   updateSubcat(cats);
   populateAccountSelects();
-  document.getElementById('g-fecha').value = fechaLocalISO();
+  const fecha = document.getElementById('g-fecha');
+  if(!fecha.value) fecha.value = fechaLocalISO();
+  populateMes('g-mes');
+  sincronizarMesConFecha('g');
 }
 
 export function updateSubcat(cats){
@@ -84,6 +89,32 @@ export function updateSubcat(cats){
   const cat = document.getElementById('g-cat').value;
   const subs = c[cat] || ['Otros'];
   document.getElementById('g-subcat').innerHTML = subs.map(s=>`<option>${esc(s)}</option>`).join('');
+}
+
+export function populateMes(id){
+  const select = document.getElementById(id);
+  if(!select) return;
+  const previous = select.value;
+  select.innerHTML = MESES.map((month, index)=>`<option value="${MESES_KEYS[index]}">${month}</option>`).join('');
+  select.value = MESES_KEYS.includes(previous) ? previous : MESES_KEYS[new Date().getMonth()];
+}
+
+export function sincronizarMesConFecha(prefix){
+  const fecha = document.getElementById(`${prefix}-fecha`)?.value;
+  const select = document.getElementById(`${prefix}-mes`);
+  if(select && fechaISOValida(fecha)) select.value = fecha.slice(5,7);
+}
+
+export function aplicarMesSeleccionado(prefix){
+  const select = document.getElementById(`${prefix}-mes`);
+  const input = document.getElementById(`${prefix}-fecha`);
+  if(!select || !input || !MESES_KEYS.includes(select.value)) return;
+  const current = fechaISOValida(input.value) ? input.value : fechaLocalISO();
+  const year = Number(current.slice(0,4));
+  const day = Number(current.slice(8,10));
+  const month = Number(select.value);
+  const lastDay = new Date(year, month, 0).getDate();
+  input.value = `${year}-${select.value}-${String(Math.min(day,lastDay)).padStart(2,'0')}`;
 }
 
 export function populateAccountSelects(){
