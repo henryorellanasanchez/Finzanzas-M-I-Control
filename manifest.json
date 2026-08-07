@@ -1,7 +1,7 @@
 {
-  "name": "Michael & Ivana · M&I Control",
+  "name": "M&I Control",
   "short_name": "M&I Control",
-  "description": "Control financiero compartido para Michael e Ivana.",
+  "description": "Control financiero compartido.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

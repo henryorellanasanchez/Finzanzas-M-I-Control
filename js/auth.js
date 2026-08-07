@@ -26,8 +26,8 @@ export function showAuthScreen(mode, extra){
   } else if(mode==='login'){
     gate.innerHTML = `
       <div class="auth-card">
-        <div class="auth-brand"><img src="./icons/michael-ivana-control.png" alt="M&amp;I Control"></div>
-        <div class="auth-title">Michael &amp; Ivana</div>
+        <div class="auth-brand"><img src="./icons/mi-control.png" alt="M&amp;I Control"></div>
+        <div class="auth-title">M&amp;I Control</div>
         <div class="auth-kicker">M&amp;I CONTROL · FINANZAS COMPARTIDAS</div>
         <div class="auth-msg">${extra ? esc(extra) : 'Inicia sesión con tu cuenta de Google para continuar.'}</div>
         <button class="btn btn-primary btn-block" onclick="loginWithGoogle()">Continuar con Google</button>
@@ -35,7 +35,7 @@ export function showAuthScreen(mode, extra){
   } else if(mode==='profile'){
     gate.innerHTML = `
       <div class="auth-card">
-        <div class="auth-brand auth-brand-small"><img src="./icons/michael-ivana-control.png" alt="M&amp;I Control"></div>
+        <div class="auth-brand auth-brand-small"><img src="./icons/mi-control.png" alt="M&amp;I Control"></div>
         <div class="auth-title">Completa tu perfil</div>
         <div class="auth-msg">Necesitamos tu nombre para identificarte dentro de tus grupos de finanzas.</div>
         <div class="form-row">

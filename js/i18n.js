@@ -15,7 +15,7 @@ const messages = {
     summary: 'Resumen', add: 'Agregar', expenses: 'Gastos', income: 'Ingresos', debts: 'Deudas',
     budgets: 'Presupuestos', monthly: 'Mensual', notes: 'Notas', reminders: 'Recordatorios',
     balanceEyebrow: 'Nuestro dinero, en equilibrio', planTogether: 'Planifiquen juntos.', moveTogether: 'Avancen juntos.',
-    welcomeText: 'Un espacio claro para cuidar cada ingreso, gasto y meta de Michael & Ivana.',
+    welcomeText: 'Un espacio claro para cuidar cada ingreso, gasto y meta.',
     expensesByCategory: 'Gastos por categoría', incomeVsExpenses: 'Ingresos vs gastos', historical: 'Histórico',
     activeDebts: 'Deudas activas', recentMovements: 'Movimientos recientes', seeAll: 'Ver todos →',
     whatRegister: '¿Qué quieren registrar?', movements: 'M&I · MOVIMIENTOS', expense: 'Gasto', incomeType: 'Ingreso',
@@ -35,7 +35,7 @@ const messages = {
     language: 'Language', spanish: 'Spanish', english: 'English', theme: 'Theme', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark',
     summary: 'Overview', add: 'Add', expenses: 'Expenses', income: 'Income', debts: 'Debts', budgets: 'Budgets', monthly: 'Monthly', notes: 'Notes', reminders: 'Reminders',
     balanceEyebrow: 'Our money, in balance', planTogether: 'Plan together.', moveTogether: 'Move forward together.',
-    welcomeText: 'A clear space to care for every income, expense, and goal for Michael & Ivana.',
+    welcomeText: 'A clear space to care for every income, expense, and goal.',
     expensesByCategory: 'Expenses by category', incomeVsExpenses: 'Income vs expenses', historical: 'History', activeDebts: 'Active debts', recentMovements: 'Recent movements', seeAll: 'See all →',
     whatRegister: 'What would you like to record?', movements: 'M&I · MOVEMENTS', expense: 'Expense', incomeType: 'Income', newDebt: 'New debt', payDebt: 'Pay debt', clothing: 'Clothing',
     allYears: 'All years', allMonths: 'All months', allCategories: 'All categories', exportCsv: 'Export CSV', totalFiltered: 'Filtered total:', allExpenses: 'All expenses', allIncome: 'All income',
@@ -60,7 +60,7 @@ export function applyLanguage(language){
   document.querySelectorAll('#filtro-cat-gas option[value=""]').forEach(el=>{ el.textContent = t('allCategories'); });
   const selector = document.getElementById('language-switcher');
   if(selector) selector.value = currentLanguage;
-  document.title = currentLanguage === 'en' ? 'Michael & Ivana · Control' : 'Michael & Ivana · Control';
+  document.title = 'M&I Control';
   setTimeout(async ()=>{
     if(state.appBootstrapped){
       const { refresh, poblarFiltrosDeAnio } = await import('./ui.js');

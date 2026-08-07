@@ -54,7 +54,7 @@ const PRECACHE_URLS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
-  './icons/michael-ivana-control.png',
+  './icons/mi-control.png',
 ];
 
 self.addEventListener('install', (event) => {
