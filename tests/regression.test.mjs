@@ -50,6 +50,16 @@ test('la migración de planificación protege metas, cuentas y recurrencias con 
   assert.match(migration, /validate_planning_references/);
 });
 
+test('el verificador de planificación cubre estructura, RLS e idempotencia', () => {
+  const verify = fs.readFileSync(path.join(root, 'supabase-planning-verify.sql'), 'utf8');
+  for (const name of ['financial_accounts', 'financial_goals', 'goal_contributions', 'recurring_transactions']) {
+    assert.match(verify, new RegExp(name));
+  }
+  assert.match(verify, /rls_enabled/);
+  assert.match(verify, /expenses_recurring_once_idx/);
+  assert.match(verify, /trg_goal_contribution_group/);
+});
+
 test('el servidor no expone rutas fuera del workspace', () => {
   const source = fs.readFileSync(path.join(root, 'preview-server.cjs'), 'utf8');
   assert.match(source, /file\.startsWith\(root \+ path\.sep\)/);
