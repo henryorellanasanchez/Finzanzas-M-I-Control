@@ -30,12 +30,13 @@
    No hace falta tocar ui.js, registry.js ni ningún otro módulo.
    ==================================================================== */
 
-import { closeModal } from './utils.js';
+import { closeModal, esc, fechaLocalISO } from './utils.js';
 import { showTab } from './ui.js';
 import { toggleTheme, applyTheme, initTheme, changeThemeMode } from './theme.js';
 import { initLanguage, changeLanguage, t } from './i18n.js';
 import { MESES } from './constants.js';
 import { getCategories, openCategoryManager, saveCustomCategory, deleteCustomCategory, refreshCategorySelectors } from './categories.js';
+import { initConnectionRecovery } from './dataLayer.js';
 import {
   initAuth, loginWithGoogle, logout, saveProfileAndContinue,
   onGroupSwitch, openAccountModal
@@ -107,12 +108,12 @@ function initStaticUI(){
   try{ initTheme(); }catch(e){}
   try{ initLanguage(); }catch(e){}
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = fechaLocalISO();
   document.getElementById('g-fecha').value = today;
   document.getElementById('i-fecha').value = today;
   document.getElementById('rec-fecha').value = today;
 
-  const gasOpts = Object.keys(getCategories()).map(c=>`<option>${c}</option>`).join('');
+  const gasOpts = Object.keys(getCategories()).map(c=>`<option>${esc(c)}</option>`).join('');
   document.getElementById('filtro-cat-gas').innerHTML = `<option value="">${t('allCategories')}</option>`+gasOpts;
 
   const mesesKeys = ['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -122,12 +123,13 @@ function initStaticUI(){
   });
 
   setTipo('gasto');
-  document.getElementById('b-cat').innerHTML = Object.keys(getCategories()).map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('b-cat').innerHTML = Object.keys(getCategories()).map(c=>`<option>${esc(c)}</option>`).join('');
   refreshCategorySelectors();
 }
 
 /* ---------- arranque ---------- */
 initStaticUI();
+initConnectionRecovery();
 initAuth();
 
 /* ---------- Service Worker (instalabilidad en Android/Chrome + shell offline) ---------- */

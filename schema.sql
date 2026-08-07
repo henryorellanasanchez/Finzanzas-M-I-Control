@@ -10,6 +10,10 @@
 
 create extension if not exists pgcrypto; -- para gen_random_uuid()
 
+-- Por defecto PostgreSQL concede EXECUTE a PUBLIC en funciones nuevas.
+-- Las RPC se habilitan explicitamente solo para authenticated mas abajo.
+alter default privileges in schema public revoke execute on functions from public;
+
 -- ----------------------------------------------------------------------------
 -- 1. PERFILES (extiende auth.users; nombres/apellidos se piden en el 1er login)
 -- ----------------------------------------------------------------------------
@@ -232,6 +236,10 @@ $$;
 
 grant execute on function public.is_group_member(uuid) to authenticated;
 grant execute on function public.is_group_owner(uuid) to authenticated;
+revoke all on function public.is_group_member(uuid) from public;
+revoke all on function public.is_group_owner(uuid) from public;
+revoke all on function public.is_group_member(uuid) from anon;
+revoke all on function public.is_group_owner(uuid) from anon;
 
 create or replace function public.is_shared_viewer(p_group_id uuid)
 returns boolean
@@ -274,6 +282,10 @@ $$;
 
 grant execute on function public.is_shared_viewer(uuid) to authenticated;
 grant execute on function public.is_shared_note_viewer(uuid) to authenticated;
+revoke all on function public.is_shared_viewer(uuid) from public;
+revoke all on function public.is_shared_note_viewer(uuid) from public;
+revoke all on function public.is_shared_viewer(uuid) from anon;
+revoke all on function public.is_shared_note_viewer(uuid) from anon;
 
 create or replace function public.create_share_link(p_group_id uuid, p_include_public_notes boolean default false)
 returns uuid
@@ -296,6 +308,8 @@ end;
 $$;
 
 grant execute on function public.create_share_link(uuid, boolean) to authenticated;
+revoke all on function public.create_share_link(uuid, boolean) from public;
+revoke all on function public.create_share_link(uuid, boolean) from anon;
 
 -- ============================================================================
 -- RPC: aceptar una invitación por token (usado por el flujo /share/{token})
@@ -340,6 +354,8 @@ end;
 $$;
 
 grant execute on function public.accept_invitation(uuid) to authenticated;
+revoke all on function public.accept_invitation(uuid) from public;
+revoke all on function public.accept_invitation(uuid) from anon;
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
@@ -469,6 +485,8 @@ drop trigger if exists trg_prevent_orphan_group on public.group_members;
 create trigger trg_prevent_orphan_group
   before update or delete on public.group_members
   for each row execute function public.prevent_orphan_group();
+revoke all on function public.prevent_orphan_group() from public;
+revoke all on function public.prevent_orphan_group() from anon;
 
 -- ---------- invitations ----------
 drop policy if exists "owner manages invitations" on public.invitations;

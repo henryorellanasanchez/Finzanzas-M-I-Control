@@ -12,8 +12,12 @@ const mime = {
 };
 
 http.createServer((req, res) => {
-  const requested = (req.url || '/').split('?')[0];
-  const relative = requested === '/' ? 'index.html' : requested.replace(/^\/+/, '');
+  let requested;
+  try{ requested = new URL(req.url || '/', 'http://127.0.0.1').pathname; }
+  catch{ res.writeHead(400); return res.end('Bad request'); }
+  let relative;
+  try{ relative = requested === '/' ? 'index.html' : decodeURIComponent(requested).replace(/^\/+/, ''); }
+  catch{ res.writeHead(400); return res.end('Bad request'); }
   const file = path.resolve(root, relative);
 
   if (!file.startsWith(root + path.sep)) {
@@ -23,10 +27,20 @@ http.createServer((req, res) => {
 
   fs.stat(file, (error, stats) => {
     if (error || !stats.isFile()) {
+      if(req.method === 'GET' && /^\/share\/[0-9a-f-]+$/i.test(requested)){
+        res.writeHead(200, { 'Content-Type': mime['.html'], 'X-Content-Type-Options': 'nosniff' });
+        return fs.createReadStream(path.join(root, 'index.html')).pipe(res);
+      }
       res.writeHead(404);
       return res.end('Not found');
     }
-    res.writeHead(200, { 'Content-Type': mime[path.extname(file)] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'Content-Type': mime[path.extname(file)] || 'application/octet-stream',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    });
     fs.createReadStream(file).pipe(res);
   });
 }).listen(5500, '127.0.0.1', () => {

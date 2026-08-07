@@ -17,5 +17,8 @@ export const state = {
   tipoActivo: 'gasto',
   charts: { donut: null, trend: null, mensualBar: null },
   appBootstrapped: false,
+  dataRequestId: 0,
+  categoriesRequestId: 0,
+  db: { status: 'unknown', lastSuccessAt: 0, error: null, retrying: false },
   googleCalendarConnected: false, // sesión de Google Calendar (separada del login), ver googleCalendar.js
 };

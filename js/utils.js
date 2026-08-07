@@ -37,6 +37,20 @@ export function mesActualYM(){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 
+// Los inputs de fecha representan fechas locales. toISOString() puede
+// retroceder un día en zonas horarias negativas antes de la medianoche UTC.
+export function fechaLocalISO(date = new Date()){
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+}
+
+export function fechaISOValida(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
 export function anioReal(){ return String(new Date().getFullYear()); }
 
 export function aniosDisponibles(){

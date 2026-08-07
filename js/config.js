@@ -15,10 +15,31 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_RptaTrZcB_2aUf_xSkz4fA_b
 // Alias de compatibilidad con el resto de la app.
 export const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
 
+// Evita que una red inestable deje promesas colgadas indefinidamente. No se
+// reintentan escrituras aqui: repetir un INSERT/PATCH sin idempotencia podria
+// duplicar movimientos. Las lecturas se reintentan de forma controlada en
+// dataLayer.js.
+export async function fetchWithTimeout(input, init = {}){
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 20000);
+  const forwardAbort = () => controller.abort();
+  if(init.signal){
+    if(init.signal.aborted) controller.abort();
+    else init.signal.addEventListener('abort', forwardAbort, { once: true });
+  }
+  try{
+    return await window.fetch(input, { ...init, signal: controller.signal });
+  }finally{
+    window.clearTimeout(timeout);
+    init.signal?.removeEventListener?.('abort', forwardAbort);
+  }
+}
+
 // `supabase` llega como variable global porque el SDK se carga vía
 // <script src="..."> (UMD) en index.html, antes de este módulo.
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  global: { fetch: fetchWithTimeout }
 });
 
 // ---------------------------------------------------------------------------

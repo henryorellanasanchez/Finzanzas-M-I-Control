@@ -2,8 +2,10 @@
   "name": "app-de-finanzas",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "App de finanzas personal y multiusuario (Supabase + Google OAuth)",
   "scripts": {
-    "dev": "node preview-server.cjs"
+    "dev": "node preview-server.cjs",
+    "test": "node --test tests/*.test.mjs"
   }
 }

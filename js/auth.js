@@ -11,9 +11,9 @@ import { loadCategories } from './categories.js';
 
 /* ---------- token de invitación en la URL ---------- */
 export function getInviteTokenFromURL(){
-  const m = window.location.pathname.match(/\/share\/([0-9a-fA-F-]{8,36})/);
-  if(m) return m[1];
-  return new URLSearchParams(window.location.search).get('invite');
+  const m = window.location.pathname.match(/\/share\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
+  const candidate = m ? m[1] : new URLSearchParams(window.location.search).get('invite');
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate||'') ? candidate : null;
 }
 
 /* ---------- pantalla de autenticación (overlay de toda la página) ---------- */
@@ -62,7 +62,9 @@ export function hideAuthScreen(){
 /* ---------- login / logout ---------- */
 export async function loginWithGoogle(){
   const token = getInviteTokenFromURL();
-  if(token) localStorage.setItem('pending_invite_token', token);
+  if(token){
+    try{ sessionStorage.setItem('pending_invite_token', token); }catch(error){ console.warn('No se pudo conservar la invitación', error); }
+  }
   const isLocal = ['localhost','127.0.0.1'].includes(window.location.hostname);
   const cleanBase = isLocal
     ? window.location.origin + window.location.pathname.replace(/\/share\/.+$/,'')
@@ -104,11 +106,15 @@ export async function saveProfileAndContinue(){
 
 /* ---------- invitaciones (aceptar) ---------- */
 async function acceptPendingInviteIfAny(){
-  const token = localStorage.getItem('pending_invite_token');
+  let token = null;
+  try{ token = sessionStorage.getItem('pending_invite_token'); }catch(error){ console.warn(error); }
+  if(!token){
+    try{ token = localStorage.getItem('pending_invite_token'); }catch(error){ console.warn(error); }
+  }
   if(!token) return null;
-  localStorage.removeItem('pending_invite_token');
   const { data, error } = await supabase.rpc('accept_invitation', { p_token: token });
   if(error){ toast('La invitación no es válida o ya expiró','err'); console.error(error); return null; }
+  try{ sessionStorage.removeItem('pending_invite_token'); localStorage.removeItem('pending_invite_token'); }catch(cleanupError){ console.warn(cleanupError); }
   return (data && data[0]) ? data[0].group_id : null;
 }
 

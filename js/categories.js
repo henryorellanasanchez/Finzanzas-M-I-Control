@@ -12,10 +12,13 @@ export function getCategories(){
 }
 
 export async function loadCategories(){
+  const groupId = state.activeGroupId;
+  const requestId = ++state.categoriesRequestId;
   state.categories = cloneDefaults();
   state.customCategories = [];
   const { data, error } = await supabase.from('finance_categories')
-    .select('id,name,subcategories,color').eq('group_id', state.activeGroupId).order('name');
+    .select('id,name,subcategories,color').eq('group_id', groupId).order('name');
+  if(requestId !== state.categoriesRequestId || groupId !== state.activeGroupId) return;
   if(error){
     console.warn('No se pudieron cargar categorías personalizadas', error);
     refreshCategorySelectors();

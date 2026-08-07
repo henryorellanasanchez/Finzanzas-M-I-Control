@@ -24,9 +24,16 @@ function renderDonutChart(){
   const total = cats.reduce((a,c)=>a+byCategoria[c],0);
   document.getElementById('donut-total').textContent = fmt(total)+' total';
 
-  const wrap = document.getElementById('chart-donut').parentElement;
-  if(!cats.length){ wrap.innerHTML = '<div class="empty">Sin gastos registrados</div>'; return; }
+  const wrap = document.getElementById('chart-donut-wrap');
+  if(!wrap) return;
+  if(!cats.length){
+    state.charts.donut?.destroy();
+    state.charts.donut = null;
+    wrap.innerHTML = '<div class="empty">Sin gastos registrados</div>';
+    return;
+  }
   if(!document.getElementById('chart-donut')) wrap.innerHTML = '<canvas id="chart-donut"></canvas>';
+  if(!window.Chart) return;
 
   const ctx = document.getElementById('chart-donut').getContext('2d');
   const cc = chartColors();
@@ -64,9 +71,16 @@ function renderTrendChart(){
       : (yms[0].slice(0,4)===yms[yms.length-1].slice(0,4) ? yms[0].slice(0,4) : `${yms[0].slice(0,4)}–${yms[yms.length-1].slice(0,4)}`);
   }
 
-  const wrap = document.getElementById('chart-trend').parentElement;
-  if(!yms.length){ wrap.innerHTML = '<div class="empty">Sin movimientos registrados</div>'; return; }
+  const wrap = document.getElementById('chart-trend-wrap');
+  if(!wrap) return;
+  if(!yms.length){
+    state.charts.trend?.destroy();
+    state.charts.trend = null;
+    wrap.innerHTML = '<div class="empty">Sin movimientos registrados</div>';
+    return;
+  }
   if(!document.getElementById('chart-trend')) wrap.innerHTML = '<canvas id="chart-trend"></canvas>';
+  if(!window.Chart) return;
 
   const ingPorYM = yms.map(ym=>state.DATA.ingresos.filter(i=>i.fecha.startsWith(ym)).reduce((a,i)=>a+i.monto,0));
   const gasPorYM = yms.map(ym=>state.DATA.gastos.filter(g=>g.fecha.startsWith(ym)).reduce((a,g)=>a+g.monto,0));

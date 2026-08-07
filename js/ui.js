@@ -22,6 +22,14 @@ function currentMoveLabel(count){
   return count===1 ? 'movimiento registrado' : 'movimientos registrados';
 }
 
+export function setConnectionState(status, message){
+  const banner = document.getElementById('connection-banner');
+  if(!banner) return;
+  banner.className = `connection-banner ${status}`;
+  banner.setAttribute('role', status === 'online' ? 'status' : 'alert');
+  banner.innerHTML = `<span class="connection-dot"></span><span>${message}</span>`;
+}
+
 export function refresh(){
   const totalRegistros = state.DATA.gastos.length + state.DATA.ingresos.length;
   const groupName = (state.myGroups.find(g=>g.id===state.activeGroupId)||{}).name || 'Grupo';

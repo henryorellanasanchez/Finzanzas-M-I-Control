@@ -20,7 +20,9 @@
 <!-- Android: soporte PWA / ícono adaptativo -->
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icons/icon-192.png" sizes="192x192">
+<!-- Favicon de marca: evita mostrar el icono generico de dolar en la pestana. -->
+<link rel="icon" type="image/png" href="./icons/mi-control.png?v=5">
+<link rel="shortcut icon" type="image/png" href="./icons/mi-control.png?v=5">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -32,6 +34,8 @@
 <body>
 <div class="auth-gate" id="auth-gate" style="display:none"></div>
 <div class="app" id="app-root" style="display:none">
+
+  <div class="connection-banner syncing" id="connection-banner" aria-live="polite"><span class="connection-dot"></span><span>Preparando conexion segura...</span></div>
 
   <div class="app-header">
     <div class="brand-lockup">
@@ -90,11 +94,11 @@
     <div class="grid-2">
       <div class="card">
         <div class="card-title"><div class="card-title-text" data-i18n="expensesByCategory">Gastos por categoría</div><span class="muted" id="donut-total"></span></div>
-        <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
+        <div class="chart-wrap" id="chart-donut-wrap"><canvas id="chart-donut"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title"><div class="card-title-text" data-i18n="incomeVsExpenses">Ingresos vs gastos</div><span class="muted" id="trend-year-label" data-i18n="historical">Histórico</span></div>
-        <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+        <div class="chart-wrap" id="chart-trend-wrap"><canvas id="chart-trend"></canvas></div>
       </div>
     </div>
 

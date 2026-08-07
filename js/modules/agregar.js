@@ -5,7 +5,7 @@
    ==================================================================== */
 import { supabase } from '../config.js';
 import { state } from '../state.js';
-import { esc, fmt, toast, getSaldoDeuda } from '../utils.js';
+import { esc, fmt, toast, getSaldoDeuda, fechaLocalISO, fechaISOValida } from '../utils.js';
 import { CATS_GASTO, MESES, MESES_KEYS } from '../constants.js';
 import { requireOwner } from '../auth.js';
 import { loadAllData } from '../dataLayer.js';
@@ -40,18 +40,18 @@ export function initGastoForm(isVest){
   const allCats = getCategories();
   const cats = isVest ? {'Vestimenta': allCats['Vestimenta'] || CATS_GASTO['Vestimenta']} : allCats;
   const catSel = document.getElementById('g-cat');
-  catSel.innerHTML = Object.keys(cats).map(c=>`<option>${c}</option>`).join('');
+  catSel.innerHTML = Object.keys(cats).map(c=>`<option>${esc(c)}</option>`).join('');
   if(isVest) catSel.value = 'Vestimenta';
   updateSubcat(cats);
   populateMes('g-mes');
-  document.getElementById('g-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('g-fecha').value = fechaLocalISO();
 }
 
 export function updateSubcat(cats){
   const c = cats || getCategories();
   const cat = document.getElementById('g-cat').value;
   const subs = c[cat] || ['Otros'];
-  document.getElementById('g-subcat').innerHTML = subs.map(s=>`<option>${s}</option>`).join('');
+  document.getElementById('g-subcat').innerHTML = subs.map(s=>`<option>${esc(s)}</option>`).join('');
 }
 
 export function populateMes(id){
@@ -80,16 +80,18 @@ export function populatePagoDeuda(){
     const saldo = getSaldoDeuda(d);
     return `<option value="${d.id}">${esc(d.persona)} — ${esc(d.concepto)} (saldo: ${fmt(saldo)})</option>`;
   }).join('');
-  document.getElementById('p-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('p-fecha').value = fechaLocalISO();
 }
 
 export async function guardarGasto(){
   if(!requireOwner()) return;
   const monto = parseFloat(document.getElementById('g-monto').value)||0;
   if(!monto){ toast('Ingresa un monto válido','err'); return; }
+  const fecha = document.getElementById('g-fecha').value;
+  if(!fechaISOValida(fecha)){ toast('Ingresa una fecha valida','err'); return; }
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id,
-    fecha: document.getElementById('g-fecha').value,
+    fecha,
     categoria: document.getElementById('g-cat').value,
     subcategoria: document.getElementById('g-subcat').value,
     descripcion: document.getElementById('g-desc').value || document.getElementById('g-subcat').value,
@@ -111,9 +113,11 @@ export async function guardarIngreso(){
   if(!requireOwner()) return;
   const monto = parseFloat(document.getElementById('i-monto').value)||0;
   if(!monto){ toast('Ingresa un monto válido','err'); return; }
+  const fecha = document.getElementById('i-fecha').value;
+  if(!fechaISOValida(fecha)){ toast('Ingresa una fecha valida','err'); return; }
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id,
-    fecha: document.getElementById('i-fecha').value,
+    fecha,
     categoria: document.getElementById('i-cat').value,
     descripcion: document.getElementById('i-desc').value || 'Ingreso',
     monto, observaciones: ''
@@ -138,7 +142,7 @@ export async function guardarDeuda(){
     tipo: document.getElementById('d-tipo').value, persona,
     concepto: document.getElementById('d-concepto').value || 'Deuda',
     monto, cuota: parseFloat(document.getElementById('d-cuota').value)||0,
-    fecha_inicio: document.getElementById('d-inicio').value || new Date().toISOString().split('T')[0],
+    fecha_inicio: document.getElementById('d-inicio').value || fechaLocalISO(),
     observaciones: document.getElementById('d-obs').value
   };
   const { data: created, error } = await supabase.from('debts').insert(payload).select('id').single();
@@ -157,9 +161,12 @@ export async function guardarPago(){
   if(!monto){ toast('Ingresa un monto válido','err'); return; }
   const deuda = state.DATA.deudas.find(d=>d.id===deudaId);
   const saldoActual = deuda ? getSaldoDeuda(deuda) : 0;
+  const fecha = document.getElementById('p-fecha').value;
+  if(!deuda){ toast('Selecciona una deuda valida','err'); return; }
+  if(!fechaISOValida(fecha)){ toast('Ingresa una fecha valida','err'); return; }
   const payload = {
     group_id: state.activeGroupId, created_by: state.session.user.id, debt_id: deudaId, monto,
-    fecha: document.getElementById('p-fecha').value,
+    fecha,
     metodo: document.getElementById('p-metodo').value, observaciones:'Abono'
   };
   const { data: created, error } = await supabase.from('debt_payments').insert(payload).select('id').single();

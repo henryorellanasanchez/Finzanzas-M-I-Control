@@ -19,7 +19,7 @@
    para que los usuarios reciban la versión nueva en vez de la cacheada.
    ==================================================================== */
 
-const CACHE_NAME = 'finanzas-shell-v4';
+const CACHE_NAME = 'finanzas-shell-v5';
 
 const PRECACHE_URLS = [
   './',
